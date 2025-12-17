@@ -3,7 +3,7 @@
 namespace App;
 
 /**
- * Helper class to load Game Jam data from YAML files
+ * Helper class to load Game Jam data from YAML and Markdown files
  */
 class GameJamData
 {
@@ -20,13 +20,12 @@ class GameJamData
             return self::$cache[$key];
         }
 
-        $yamlFile = base_path("jekyll-site/_data/games{$year}.yml");
+        $yamlFile = base_path("_data/games/games{$year}.yaml");
         
         if (!file_exists($yamlFile)) {
             return [];
         }
 
-        // Use Symfony YAML to parse the file
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
         
         self::$cache[$key] = $data ?? [];
@@ -39,7 +38,7 @@ class GameJamData
      */
     public static function getJam(int $year): ?array
     {
-        $markdownFile = base_path("jekyll-site/_jams/{$year}.md");
+        $markdownFile = base_path("_data/jams/{$year}.md");
         
         if (!file_exists($markdownFile)) {
             return null;
@@ -60,7 +59,20 @@ class GameJamData
      */
     public static function getAvailableYears(): array
     {
-        return [2015, 2016, 2017, 2018, 2019, 2020, 2022, 2023, 2024];
+        // Discover years from data files so we don't need to hardcode them.
+        $files = glob(base_path('_data/jams/*.md')) ?: [];
+
+        $years = [];
+        foreach ($files as $file) {
+            $name = basename($file, '.md');
+            if (preg_match('/^\d{4}$/', $name)) {
+                $years[] = (int) $name;
+            }
+        }
+
+        sort($years);
+
+        return array_values(array_unique($years));
     }
 
     /**
@@ -68,7 +80,7 @@ class GameJamData
      */
     public static function getRules(): array
     {
-        $yamlFile = base_path("jekyll-site/_data/rules.yml");
+        $yamlFile = base_path("_data/rules.yaml");
         
         if (!file_exists($yamlFile)) {
             return [];
@@ -78,17 +90,8 @@ class GameJamData
     }
 
     /**
-     * Get site configuration from Jekyll config
+     * Site configuration is stored in config/gamejam.php.
+     * Use config('gamejam.*') directly in templates and build tasks.
      */
-    public static function getSiteConfig(): array
-    {
-        $configFile = base_path("jekyll-site/_config.yml");
-        
-        if (!file_exists($configFile)) {
-            return [];
-        }
-
-        return \Symfony\Component\Yaml\Yaml::parseFile($configFile) ?? [];
-    }
 }
 

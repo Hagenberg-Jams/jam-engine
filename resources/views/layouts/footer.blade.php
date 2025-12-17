@@ -1,16 +1,12 @@
 @php
-    $siteConfig = \App\GameJamData::getSiteConfig();
-    $companyName = $siteConfig['company_name'] ?? 'University of Applied Sciences Upper Austria – Department of Digital Media';
-    $email = $siteConfig['email'] ?? 'info@hagenberg-gamejam.at';
-    $companyAddress = $siteConfig['company_address'] ?? '';
-    $companyUrl = $siteConfig['company_url'] ?? '';
-    $logoLight = $siteConfig['site_logo_light'] ?? 'hagenberg_game_jam_logo_white.svg';
-    // Clean up logo path - remove leading slash and assets/images/ prefix
-    $logoLight = ltrim($logoLight, '/');
-    $logoLight = str_replace(['jekyll-site/assets/images/', 'assets/images/'], '', $logoLight);
-    $instagramUrl = $siteConfig['instagram_url'] ?? '';
-    $discordUrl = $siteConfig['discord_url'] ?? '';
-    $githubUrl = $siteConfig['github_url'] ?? '';
+    $companyName = config('gamejam.company.name', 'University of Applied Sciences Upper Austria – Department of Digital Media');
+    $email = config('gamejam.email', 'info@hagenberg-gamejam.at');
+    $companyAddress = config('gamejam.company.address', '');
+    $companyUrl = config('gamejam.company.url', '');
+    $logoLight = ltrim((string) config('gamejam.branding.logo_light', 'hagenberg_game_jam_logo_white.svg'), '/');
+    $instagramUrl = config('gamejam.social.instagram', '');
+    $discordUrl = config('gamejam.social.discord', '');
+    $githubUrl = config('gamejam.social.github', '');
 @endphp
 
 <footer class="bg-gray-800 text-white mt-auto">
