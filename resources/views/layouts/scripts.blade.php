@@ -2,7 +2,12 @@
 @if(Vite::running())
     {{ Vite::assets(['resources/assets/app.js']) }}
 @elseif(Asset::exists('app.js'))
-    <script type="module" defer src="{{ Asset::get('app.js') }}"></script>
+    @php
+        // Use relative path for development server compatibility
+        $jsPath = '/media/app.js';
+        $cacheBust = file_exists(base_path('_media/app.js')) ? '?v=' . substr(md5_file(base_path('_media/app.js')), 0, 8) : '';
+    @endphp
+    <script type="module" defer src="{{ $jsPath }}{{ $cacheBust }}"></script>
 @endif
 
 {{-- Alpine.js with Collapse plugin --}}

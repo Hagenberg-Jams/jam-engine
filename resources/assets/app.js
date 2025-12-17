@@ -11,26 +11,35 @@ import '@glidejs/glide/dist/css/glide.theme.min.css';
 import GLightbox from 'glightbox';
 import 'glightbox/dist/css/glightbox.css';
 
-// Initialize Glide sliders when DOM is ready
+// Initialize Hero Slider (Vanilla JS)
 document.addEventListener('DOMContentLoaded', function() {
-    // Hero slider
-    const heroSlider = document.querySelector('.hero-slider');
-    if (heroSlider) {
-        // Ensure the slider container is visible
-        heroSlider.style.display = 'block';
-        const glide = new Glide('.hero-slider', {
-            type: 'carousel',
-            autoplay: 5000,
-            hoverpause: true,
-            perView: 1,
-            animationDuration: 1000,
-            startAt: 0,
-        });
-        glide.mount();
-        // Force update after mount
-        setTimeout(() => {
-            glide.update();
-        }, 100);
+    const heroSlides = document.querySelectorAll('.hero-slide');
+    if (heroSlides.length > 0) {
+        let currentSlide = 0;
+        const totalSlides = heroSlides.length;
+        
+        // Function to show a specific slide
+        function showSlide(index) {
+            heroSlides.forEach((slide, i) => {
+                if (i === index) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+        }
+        
+        // Function to go to next slide
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            showSlide(currentSlide);
+        }
+        
+        // Initialize: show first slide
+        showSlide(0);
+        
+        // Auto-advance slides every 5 seconds
+        setInterval(nextSlide, 5000);
     }
 
     // Sponsors slider
