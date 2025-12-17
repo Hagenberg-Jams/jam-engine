@@ -9,11 +9,19 @@
 </head>
 <body id="app" class="flex flex-col min-h-screen overflow-x-hidden dark:bg-gray-900 dark:text-white" x-data="{ navigationOpen: false }" x-on:keydown.escape="navigationOpen = false;">
     @include('hyde::components.skip-to-content-button')
-    @if(view()->exists('layouts.navigation'))
-        @include('layouts.navigation')
-    @else
-        @include('hyde::layouts.navigation')
-    @endif
+    <header class="{{ $__env->hasSection('header') ? 'h-screen flex flex-col' : '' }}">
+        @if(view()->exists('layouts.navigation'))
+            @include('layouts.navigation')
+        @else
+            @include('hyde::layouts.navigation')
+        @endif
+
+        @hasSection('header')
+            <div class="flex-1 min-h-0">
+                @yield('header')
+            </div>
+        @endif
+    </header>
 
     <main id="content" class="flex-1">
         @yield('content')
