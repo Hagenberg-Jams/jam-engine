@@ -25,4 +25,3 @@ class GenerateGameJamPages
         file_put_contents($filePath, $template);
     }
 }
-
