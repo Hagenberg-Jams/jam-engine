@@ -10,6 +10,28 @@ class GameJamData
     protected static array $cache = [];
 
     /**
+     * Load homepage data (about/video/sponsors).
+     */
+    public static function getHomepage(): array
+    {
+        $key = 'homepage';
+
+        if (isset(self::$cache[$key])) {
+            return self::$cache[$key];
+        }
+
+        $yamlFile = base_path('_data/homepage.yaml');
+        if (!file_exists($yamlFile)) {
+            return [];
+        }
+
+        $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
+        self::$cache[$key] = is_array($data) ? $data : [];
+
+        return self::$cache[$key];
+    }
+
+    /**
      * Load games data for a specific year
      */
     public static function getGames(int $year): array
