@@ -29,9 +29,9 @@
 @if(!$gameEntry)
     <section class="py-16 bg-white dark:bg-gray-900">
         <div class="container mx-auto px-4">
-            <a href="/{{ $year }}" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Zurück zu {{ $year }}</a>
-            <h1 class="text-3xl font-bold mt-6 dark:text-white">Game nicht gefunden</h1>
-            <p class="mt-2 text-gray-600 dark:text-gray-300">Die Daten für diese Seite fehlen oder der Slug stimmt nicht mehr.</p>
+            <a href="/{{ $year }}" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Back to {{ $year }}</a>
+            <h1 class="text-3xl font-bold mt-6 dark:text-white">Game not found</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-300">The data for this page is missing, or the slug no longer matches.</p>
         </div>
     </section>
 @else

@@ -7,7 +7,7 @@
 <section class="bg-indigo-600 text-white py-16">
     <div class="container mx-auto px-4">
         <div class="mb-4">
-            <a href="/{{ $year }}" class="text-indigo-200 hover:text-white transition-colors">← Zurück zu {{ $year }}</a>
+            <a href="/{{ $year }}" class="text-indigo-200 hover:text-white transition-colors">← Back to {{ $year }}</a>
         </div>
         <h1 class="text-4xl md:text-5xl font-bold mb-2">{{ $gameName }}</h1>
         @if($jam && isset($jam['topic']))
