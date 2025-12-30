@@ -69,7 +69,8 @@ class GameJamData
         $content = file_get_contents($markdownFile);
         $frontMatter = [];
         
-        if (preg_match('/^---\s*\n(.*?)\n---\s*\n/s', $content, $matches)) {
+        // Match front matter with optional newline after closing ---
+        if (preg_match('/^---\s*\n(.*?)\n---\s*(?:\n|$)/s', $content, $matches)) {
             $frontMatter = \Symfony\Component\Yaml\Yaml::parse($matches[1]) ?? [];
         }
         

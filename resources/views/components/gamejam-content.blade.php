@@ -72,14 +72,21 @@
                         <a href="/{{ $year }}/{{ $gameSlug }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{{ $gameName }}</a>
                     </h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{{ \Illuminate\Support\Str::limit(strip_tags($description), 100) }}</p>
-                    <div class="flex items-center justify-between">
-                        <div class="flex gap-2 flex-wrap">
-                            <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</span>
-                            @foreach($controls as $control)
-                            <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded capitalize">{{ $control }}</span>
-                            @endforeach
-                        </div>
-                        <a href="/{{ $year }}/{{ $gameSlug }}" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Read More →</a>
+                    <div class="flex gap-2 flex-wrap mb-4">
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</span>
+                        @foreach($controls as $control)
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded capitalize">{{ $control }}</span>
+                        @endforeach
+                        @php
+                            $downloads = $entry['download'] ?? [];
+                            $platforms = collect($downloads)->pluck('platform')->unique()->values();
+                        @endphp
+                        @foreach($platforms as $platform)
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{{ $platform }}</span>
+                        @endforeach
+                    </div>
+                    <div>
+                        <a href="/{{ $year }}/{{ $gameSlug }}" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Details and Download →</a>
                     </div>
                 </div>
             </div>
