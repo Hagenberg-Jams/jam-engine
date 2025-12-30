@@ -53,10 +53,10 @@
             {{-- 3) Archive Dropdown (all years except latest) --}}
             @if(count($archiveYears))
                 <li class="md:mx-2">
-                    <x-hyde::navigation.dropdown
-                        label="Archive"
-                        :items="collect($archiveYears)->map(fn (int $y) => NavigationItem::create((string) $y, (string) $y, 900))"
-                    />
+                    @include('components.navigation.dropdown', [
+                        'label' => 'Archive',
+                        'items' => collect($archiveYears)->map(fn (int $y) => NavigationItem::create((string) $y, (string) $y, 900))
+                    ])
                 </li>
             @endif
 
