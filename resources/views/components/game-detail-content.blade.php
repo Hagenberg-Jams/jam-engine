@@ -30,22 +30,13 @@
                 <p class="text-xl font-bold dark:text-white">{{ implode(', ', array_map('ucfirst', $controls)) }}</p>
             </div>
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Download</h3>
-                <div class="flex flex-col gap-2">
-                    @foreach($downloads as $download)
-                        @php
-                            $file = $download['file'] ?? '';
-                            $platform = $download['platform'] ?? 'Download';
-                            $isUrl = str_starts_with($file, 'http://') || str_starts_with($file, 'https://');
-                            $downloadUrl = $isUrl ? $file : "/games/{$year}/{$file}";
-                        @endphp
-                        <a href="{{ $downloadUrl }}"
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-center font-semibold transition-colors w-full"
-                           @if(!$isUrl) download @endif>
-                            {{ $platform }}
-                        </a>
-                    @endforeach
-                </div>
+                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Versions</h3>
+                <p class="text-xl font-bold dark:text-white">
+                    @php
+                        $platforms = collect($downloads)->pluck('platform')->unique()->values();
+                    @endphp
+                    {{ $platforms->implode(', ') }}
+                </p>
             </div>
         </div>
 
@@ -84,7 +75,7 @@
 
         <!-- Gallery -->
         @if(count($images) > 0)
-            <div>
+            <div class="mb-12">
                 <h2 class="text-3xl font-bold mb-6 dark:text-white">Screenshots</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach($images as $image)
@@ -104,6 +95,28 @@
                                 </a>
                             </div>
                         @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <!-- Downloads -->
+        @if(count($downloads) > 0)
+            <div class="mb-12">
+                <h2 class="text-3xl font-bold mb-6 dark:text-white">Download</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($downloads as $download)
+                        @php
+                            $file = $download['file'] ?? '';
+                            $platform = $download['platform'] ?? 'Download';
+                            $isUrl = str_starts_with($file, 'http://') || str_starts_with($file, 'https://');
+                            $downloadUrl = $isUrl ? $file : "/games/{$year}/{$file}";
+                        @endphp
+                        <a href="{{ $downloadUrl }}"
+                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-lg text-center font-semibold transition-colors"
+                           @if(!$isUrl) download @endif>
+                            {{ $platform }}
+                        </a>
                     @endforeach
                 </div>
             </div>
