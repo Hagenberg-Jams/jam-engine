@@ -10,8 +10,8 @@
             <a href="/{{ $year }}" class="text-indigo-200 hover:text-white transition-colors">← Back to {{ $year }}</a>
         </div>
         <h1 class="text-4xl md:text-5xl font-bold mb-2">{{ $gameName }}</h1>
-        @if($jam && isset($jam['topic']))
-            <p class="text-xl text-indigo-200">{{ $jam['topic'] }}</p>
+        @if(isset($team['name']))
+            <p class="text-xl text-indigo-200">{{ $team['name'] }}</p>
         @endif
     </div>
 </section>
@@ -20,11 +20,7 @@
 <section class="py-16 bg-white dark:bg-gray-900">
     <div class="container mx-auto px-4">
         <!-- Info Boxes -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Created By</h3>
-                <p class="text-xl font-bold dark:text-white">{{ $team['name'] ?? 'Unknown Team' }}</p>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Players</h3>
                 <p class="text-xl font-bold dark:text-white">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</p>
@@ -44,7 +40,7 @@
                             $downloadUrl = $isUrl ? $file : "/games/{$year}/{$file}";
                         @endphp
                         <a href="{{ $downloadUrl }}"
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-center font-semibold transition-colors"
+                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-center font-semibold transition-colors w-full"
                            @if(!$isUrl) download @endif>
                             {{ $platform }}
                         </a>
