@@ -86,20 +86,20 @@
         @if(count($images) > 0)
             <div>
                 <h2 class="text-3xl font-bold mb-6 dark:text-white">Screenshots</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach($images as $image)
                         @php
                             $imageFile = $image['file'] ?? '';
-                            $imageThumb = $image['thumb'] ?? $imageFile;
+                            $imageThumb = $image['thumb'] ?? '';
                         @endphp
 
-                        @if($imageFile && file_exists(base_path("_media/{$year}/{$imageFile}")))
+                        @if($imageFile)
                             <div class="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow">
-                                <a href="/media/{{ $year }}/{{ $imageFile }}"
-                                   data-lightbox="gallery-{{ $gameSlug }}"
+                                <a href="/media/{{ $year }}/{{ $imageFile }}" 
+                                   data-lightbox="gallery-{{ $gameSlug }}" 
                                    data-title="{{ $gameName }} by {{ $team['name'] ?? 'Unknown Team' }}">
-                                    <img src="/media/{{ $year }}/{{ $imageThumb }}"
-                                         alt="{{ $gameName }} Screenshot"
+                                    <img src="/media/{{ $year }}/{{ $imageThumb ?: $imageFile }}" 
+                                         alt="{{ $gameName }} Screenshot" 
                                          class="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300">
                                 </a>
                             </div>
@@ -111,15 +111,19 @@
     </div>
 </section>
 
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/glightbox@3.2.0/dist/css/glightbox.min.css" rel="stylesheet">
+@endpush
+
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/glightbox@3.2.0/dist/js/glightbox.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/glightbox@3.2.0/dist/css/glightbox.min.css" rel="stylesheet">
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            GLightbox({
-                selector: '[data-lightbox]',
+            const lightbox = GLightbox({
+                selector: '[data-lightbox="gallery-{{ $gameSlug }}"]',
                 touchNavigation: true,
-                loop: false,
+                loop: true,
+                autoplayVideos: false,
             });
         });
     </script>
