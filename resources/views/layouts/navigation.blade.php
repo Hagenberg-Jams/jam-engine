@@ -60,7 +60,12 @@
                 </li>
             @endif
 
-            {{-- 4) Rules --}}
+            {{-- 4) People --}}
+            <li class="md:mx-2">
+                <x-hyde::navigation.navigation-link :item="NavigationItem::create('people', 'People', 15)"/>
+            </li>
+
+            {{-- 5) Rules --}}
             <li class="md:mx-2">
                 <x-hyde::navigation.navigation-link :item="NavigationItem::create('rules', 'Rules', 20)"/>
             </li>

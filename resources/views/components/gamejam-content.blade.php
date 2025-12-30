@@ -15,7 +15,14 @@
 <!-- Filter Buttons -->
 <section class="py-8 bg-gray-50 dark:bg-gray-800">
     <div class="container mx-auto px-4">
-        <div class="flex flex-wrap justify-center gap-4" id="filter-buttons">
+        <div class="flex flex-wrap items-center justify-center gap-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter:</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4" id="filter-buttons">
             <button class="filter-btn active px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" data-filter="*">All Games</button>
             <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-filter=".singleplayer">Singleplayer</button>
             <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" data-filter=".multiplayer">Multiplayer</button>

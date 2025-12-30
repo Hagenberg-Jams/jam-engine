@@ -44,6 +44,10 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
             $this->registerYearPage($year);
             $this->registerGamePages($year);
         }
+
+        // Generate person pages and people overview page
+        $this->registerPeopleOverviewPage($years);
+        $this->registerPersonPages($years);
     }
 
     /** @return array<int> */
@@ -108,6 +112,168 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
             Hyde::pages()->addPage($page);
             Hyde::routes()->addRoute(new Route($page));
         }
+    }
+
+    /**
+     * Register the people overview page listing all participants.
+     *
+     * @param array<int> $years
+     */
+    protected function registerPeopleOverviewPage(array $years): void
+    {
+        /** @var array<string, array{name: string, slug: string, totalGames: int, years: array<int>}> */
+        $persons = [];
+
+        // Collect all persons from all games
+        foreach ($years as $year) {
+            $games = GameJamData::getGames($year);
+            if (!is_array($games) || $games === []) {
+                continue;
+            }
+
+            foreach ($games as $entry) {
+                $team = $entry['team'] ?? [];
+                $members = is_array($team) ? ($team['members'] ?? []) : [];
+
+                if (!is_array($members)) {
+                    continue;
+                }
+
+                foreach ($members as $member) {
+                    if (!is_string($member) || $member === '') {
+                        continue;
+                    }
+
+                    // Normalize person name
+                    $normalizedName = $this->normalizePersonName($member);
+                    $slug = Str::slug($normalizedName);
+
+                    if ($slug === '') {
+                        continue;
+                    }
+
+                    if (!isset($persons[$normalizedName])) {
+                        $persons[$normalizedName] = [
+                            'name' => $normalizedName,
+                            'slug' => $slug,
+                            'totalGames' => 0,
+                            'years' => [],
+                        ];
+                    }
+
+                    $persons[$normalizedName]['totalGames']++;
+                    if (!in_array($year, $persons[$normalizedName]['years'], true)) {
+                        $persons[$normalizedName]['years'][] = $year;
+                    }
+                }
+            }
+        }
+
+        // Sort alphabetically by name
+        usort($persons, function (array $a, array $b): int {
+            return strcasecmp($a['name'], $b['name']);
+        });
+
+        // Register the people overview page
+        $page = InMemoryPage::make('people', [
+            'persons' => array_values($persons),
+        ], '', 'pages.people');
+
+        Hyde::pages()->addPage($page);
+        Hyde::routes()->addRoute(new Route($page));
+    }
+
+    /**
+     * Collect all persons from all games and register person pages.
+     *
+     * @param array<int> $years
+     */
+    protected function registerPersonPages(array $years): void
+    {
+        /** @var array<string, array<int, array{year: int, gameName: string, gameSlug: string, teamName: string, teamSlug: string}>> */
+        $persons = [];
+
+        // Collect all persons from all games
+        foreach ($years as $year) {
+            $games = GameJamData::getGames($year);
+            if (!is_array($games) || $games === []) {
+                continue;
+            }
+
+            foreach ($games as $entry) {
+                $game = $entry['game'] ?? [];
+                $team = $entry['team'] ?? [];
+                $gameName = is_array($game) ? ($game['name'] ?? '') : '';
+                $teamName = is_array($team) ? ($team['name'] ?? '') : '';
+                $members = is_array($team) ? ($team['members'] ?? []) : [];
+
+                if (!is_string($gameName) || $gameName === '' || !is_array($members)) {
+                    continue;
+                }
+
+                $gameSlug = Str::slug($gameName);
+                $teamSlug = Str::slug($teamName);
+
+                foreach ($members as $member) {
+                    if (!is_string($member) || $member === '') {
+                        continue;
+                    }
+
+                    // Normalize person name (trim, remove extra spaces)
+                    $normalizedName = $this->normalizePersonName($member);
+
+                    if (!isset($persons[$normalizedName])) {
+                        $persons[$normalizedName] = [];
+                    }
+
+                    // Add game info for this person
+                    $persons[$normalizedName][] = [
+                        'year' => $year,
+                        'gameName' => $gameName,
+                        'gameSlug' => $gameSlug,
+                        'teamName' => $teamName,
+                        'teamSlug' => $teamSlug,
+                    ];
+                }
+            }
+        }
+
+        // Register a page for each person
+        foreach ($persons as $personName => $games) {
+            $slug = Str::slug($personName);
+            if ($slug === '') {
+                continue;
+            }
+
+            // Sort games by year (newest first)
+            usort($games, function (array $a, array $b): int {
+                return $b['year'] <=> $a['year'];
+            });
+
+            $identifier = "person/{$slug}";
+
+            $page = InMemoryPage::make($identifier, [
+                'personName' => $personName,
+                'games' => $games,
+                'totalGames' => count($games),
+                'years' => array_unique(array_column($games, 'year')),
+            ], '', 'pages.person');
+
+            Hyde::pages()->addPage($page);
+            Hyde::routes()->addRoute(new Route($page));
+        }
+    }
+
+    /**
+     * Normalize person name for consistent grouping.
+     */
+    protected function normalizePersonName(string $name): string
+    {
+        // Trim and normalize whitespace
+        $normalized = trim($name);
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+        return $normalized;
     }
 }
 
