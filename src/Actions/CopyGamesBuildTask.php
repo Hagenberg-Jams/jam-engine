@@ -153,7 +153,7 @@ class CopyGamesBuildTask extends PostBuildTask
             $targetPath = $target . '/' . $item;
 
             if (is_file($sourcePath)) {
-                // Only process ZIP files
+                // Only process ZIP files (all other files including .gitignore and .gitkeep are ignored)
                 if (str_ends_with(strtolower($item), '.zip')) {
                     // Extract relative path for checksum lookup (e.g., "2024/game.zip")
                     $relativePath = str_replace(base_path('games') . '/', '', $sourcePath);
