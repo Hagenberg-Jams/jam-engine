@@ -53,10 +53,9 @@ class CreateGameJamCommand extends Command
         $startDate = $this->askForDate('Start date', 'YYYY-MM-DD');
         $endDate = $this->askForDate('End date', 'YYYY-MM-DD');
         $hours = (int) $this->ask('Duration in hours (e.g., 36, 48)', '36');
-        $logo = $this->ask('Logo filename (e.g., gamejam2024.svg)', "gamejam{$year}.svg");
 
         // Create jam MD file
-        $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours, $logo);
+        $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours);
 
         // Create empty games YAML file
         $yamlFile = base_path("_data/games/games{$year}.yaml");
@@ -113,7 +112,7 @@ class CreateGameJamCommand extends Command
         }
     }
 
-    protected function createJamFile(int $year, string $title, string $topic, string $startDate, string $endDate, int $hours, string $logo): void
+    protected function createJamFile(int $year, string $title, string $topic, string $startDate, string $endDate, int $hours): void
     {
         $content = "---\n";
         $content .= "title: \"{$title}\"\n";
@@ -122,7 +121,6 @@ class CreateGameJamCommand extends Command
         $content .= "enddate: {$endDate}\n";
         $content .= "hours: {$hours}\n";
         $content .= "data: games{$year}\n";
-        $content .= "logo: \"{$logo}\"\n";
         $content .= "---\n";
 
         $file = base_path("_data/jams/{$year}.md");
