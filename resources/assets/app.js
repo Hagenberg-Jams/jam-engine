@@ -82,17 +82,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Smooth scroll to top
+// Smooth scroll to top - show button when navigation is not visible
 document.addEventListener('DOMContentLoaded', function() {
     const scrollTopBtn = document.getElementById('scroll-top');
-    if (scrollTopBtn) {
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 300) {
+    const mainNavigation = document.getElementById('main-navigation');
+    
+    if (scrollTopBtn && mainNavigation) {
+        function checkNavigationVisibility() {
+            const navRect = mainNavigation.getBoundingClientRect();
+            // Show button when navigation has scrolled out of view (top of nav is above viewport)
+            if (navRect.bottom < 0) {
                 scrollTopBtn.classList.remove('hidden');
             } else {
                 scrollTopBtn.classList.add('hidden');
             }
-        });
+        }
+
+        window.addEventListener('scroll', checkNavigationVisibility);
+        // Check on initial load
+        checkNavigationVisibility();
 
         scrollTopBtn.addEventListener('click', function() {
             window.scrollTo({

@@ -21,15 +21,15 @@
     <div class="container mx-auto px-4">
         <!-- Info Boxes -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+            <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Players</h3>
                 <p class="text-xl font-bold dark:text-white">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</p>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+            <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Input</h3>
                 <p class="text-xl font-bold dark:text-white">{{ implode(', ', array_map('ucfirst', $controls)) }}</p>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+            <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Versions</h3>
                 <p class="text-xl font-bold dark:text-white">
                     @php
@@ -62,7 +62,7 @@
                         @php
                             $personSlug = \Illuminate\Support\Str::slug(trim(preg_replace('/\s+/', ' ', $member)));
                         @endphp
-                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+                        <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-4 text-center">
                             <a href="/person/{{ $personSlug }}" 
                                class="font-semibold dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 {{ $member }}

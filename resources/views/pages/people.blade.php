@@ -16,7 +16,7 @@
 </section>
 
 <!-- Sort Buttons -->
-<section class="py-8 bg-gray-50 dark:bg-gray-800">
+<section class="py-8 bg-gray-200 dark:bg-gray-800">
     <div class="container mx-auto px-4">
         <div class="flex flex-wrap items-center justify-center gap-4">
             <div class="flex items-center gap-2">
@@ -73,7 +73,7 @@
         @else
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="people-grid">
                 @foreach($persons as $person)
-                    <div class="person-card bg-gray-50 dark:bg-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow text-center" 
+                    <div class="person-card bg-gray-200 dark:bg-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow text-center" 
                          data-name="{{ strtolower($person['name']) }}" 
                          data-jams="{{ count($person['years']) }}">
                         <a href="/person/{{ $person['slug'] }}" 

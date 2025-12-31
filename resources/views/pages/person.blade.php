@@ -34,7 +34,7 @@
         @else
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
                 @foreach($games as $game)
-                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow">
                         <div class="mb-4">
                             <a href="/{{ $game['year'] }}/{{ $game['gameSlug'] }}" 
                                class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
