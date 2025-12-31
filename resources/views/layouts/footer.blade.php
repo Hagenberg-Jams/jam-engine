@@ -17,15 +17,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Logo -->
                 <div>
-                    <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name', 'Hagenberg Game Jam') }}" class="h-16 mb-4">
+                    <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name', 'Hagenberg Game Jam') }}" class="h-24">
                 </div>
 
                 <!-- Contact -->
                 <div>
                     <h5 class="text-xl font-bold mb-4">Contact</h5>
                     <ul class="space-y-1 text-gray-300 text-sm">
-                        <li>{{ $companyName }}</li>
                         <li><a href="mailto:{{ $email }}" class="hover:text-white transition-colors">{{ $email }}</a></li>
+                        <li>{{ $companyName }}</li>
                         <li>{{ $companyAddress }}</li>
                         <li><a href="{{ $companyUrl }}" target="_blank" class="hover:text-white transition-colors">{{ $companyUrl }}</a></li>
                     </ul>
