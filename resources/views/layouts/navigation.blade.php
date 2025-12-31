@@ -4,6 +4,27 @@
     $latestJam = (string) config('gamejam.latest_jam', '2024');
     $archiveYears = array_values(array_filter(\App\GameJamData::getAvailableYears(), fn (int $y) => (string) $y !== $latestJam));
     rsort($archiveYears);
+    
+    // Group years by decade
+    $decades = [];
+    foreach ($archiveYears as $year) {
+        // Determine decade: 2011-2019 = 2010s, 2020-2029 = 2020s, etc.
+        $decade = (int) floor($year / 10) * 10;
+        $decadeLabel = "{$decade}s";
+        
+        if (!isset($decades[$decadeLabel])) {
+            $decades[$decadeLabel] = [];
+        }
+        $decades[$decadeLabel][] = $year;
+    }
+    
+    // Sort decades descending (newest first)
+    krsort($decades);
+    
+    // Sort years within each decade descending
+    foreach ($decades as $decadeLabel => $years) {
+        rsort($decades[$decadeLabel]);
+    }
 @endphp
 
 <nav aria-label="Main navigation" id="main-navigation" class="flex flex-wrap items-center justify-between p-4 shadow-lg sm:shadow-xl md:shadow-none dark:bg-gray-800 bg-white">
@@ -50,14 +71,16 @@
                 <x-hyde::navigation.navigation-link :item="NavigationItem::create($latestJam, $latestJam, 10)"/>
             </li>
 
-            {{-- 3) Archive Dropdown (all years except latest) --}}
+            {{-- 3) Archive Dropdowns (grouped by decade) --}}
             @if(count($archiveYears))
-                <li class="md:mx-2">
-                    @include('components.navigation.dropdown', [
-                        'label' => 'Archive',
-                        'items' => collect($archiveYears)->map(fn (int $y) => NavigationItem::create((string) $y, (string) $y, 900))
-                    ])
-                </li>
+                @foreach($decades as $decadeLabel => $years)
+                    <li class="md:mx-2">
+                        @include('components.navigation.dropdown', [
+                            'label' => $decadeLabel,
+                            'items' => collect($years)->map(fn (int $y) => NavigationItem::create((string) $y, (string) $y, 900))
+                        ])
+                    </li>
+                @endforeach
             @endif
 
             {{-- 4) People --}}

@@ -68,11 +68,24 @@ class CreateGameJamCommand extends Command
         // Update navigation configuration
         $this->updateNavigationConfig($year);
 
+        // Determine decade for info message
+        $decade = (int) floor($year / 10) * 10;
+        $decadeLabel = "{$decade}s";
+
         $this->newLine();
         $this->info("Successfully created Game Jam {$year}!");
         $this->info("  - Jam metadata: _data/jams/{$year}.md");
         $this->info("  - Games data: _data/games/games{$year}.yaml");
-        $this->info("  - Navigation updated (latest_jam set to {$year})");
+        $this->info("  - Archive: Will appear in '{$decadeLabel}' navigation menu");
+        
+        // Check if this is the latest jam
+        $allYears = GameJamData::getAvailableYears();
+        $highestYear = !empty($allYears) ? max($allYears) : $year;
+        if ($year >= $highestYear) {
+            $this->info("  - Navigation: Set as latest jam (appears separately in navigation)");
+        } else {
+            $this->info("  - Navigation: Added to archive (appears in '{$decadeLabel}' dropdown)");
+        }
 
         return 0;
     }
