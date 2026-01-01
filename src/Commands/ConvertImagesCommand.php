@@ -203,7 +203,25 @@ class ConvertImagesCommand extends Command
                 continue;
             }
             
-            $this->convertImageFile(null, basename($file), $targetFormat, $dryRun, '_media');
+            $filename = basename($file);
+            // Skip favicons, app icons, and 404 images (they should stay PNG for compatibility or are not used)
+            $filenameLower = strtolower($filename);
+            $skipPatterns = [
+                'favicon-16x16', 'favicon-32x32', 'apple-touch-icon', 
+                'android-chrome-192x192', 'android-chrome-512x512',
+                '404.png', '404_text.png'
+            ];
+            $skipFile = false;
+            foreach ($skipPatterns as $pattern) {
+                if (str_contains($filenameLower, $pattern)) {
+                    $skipFile = true;
+                    break;
+                }
+            }
+            
+            if (!$skipFile) {
+                $this->convertImageFile(null, $filename, $targetFormat, $dryRun, '_media');
+            }
         }
 
         // Summary
@@ -263,6 +281,19 @@ class ConvertImagesCommand extends Command
         $nonImageExtensions = ['css', 'js', 'json', 'xml', 'html', 'htm', 'txt', 'md', 'manifest', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'otf'];
         if (in_array($ext, $nonImageExtensions)) {
             return $filename;
+        }
+
+        // Skip favicons, app icons, and 404 images (they should stay PNG for compatibility or are not used)
+        $filenameLower = strtolower($filename);
+        $skipPatterns = [
+            'favicon-16x16', 'favicon-32x32', 'apple-touch-icon', 
+            'android-chrome-192x192', 'android-chrome-512x512',
+            '404.png', '404_text.png'
+        ];
+        foreach ($skipPatterns as $pattern) {
+            if (str_contains($filenameLower, $pattern)) {
+                return $filename;
+            }
         }
 
         // Normalize format for comparison (jpg/jpeg are equivalent)
