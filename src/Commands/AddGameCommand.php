@@ -266,7 +266,8 @@ class AddGameCommand extends Command
 
     protected function askForTeamMembers(): array
     {
-        $this->info('Enter team members (comma-separated, semicolon-separated, or one per line). Type "---END---" when finished:');
+        $this->info('Enter team members (comma-separated, semicolon-separated, markdown list format, or one per line). Type "---END---" when finished:');
+        $this->info('Note: Markdown list format "- Name" is supported (the "- " prefix will be automatically removed)');
         $this->newLine();
 
         $input = '';
@@ -320,9 +321,11 @@ class AddGameCommand extends Command
             }
         }
 
-        // Clean up: remove empty entries, normalize whitespace
+        // Clean up: remove empty entries, normalize whitespace, remove "- " prefix
         $members = array_filter(array_map(function ($m) {
             $m = trim($m);
+            // Remove "- " prefix if present (for markdown list format)
+            $m = preg_replace('/^-\s+/', '', $m);
             return preg_replace('/\s+/', ' ', $m);
         }, $members));
 
@@ -354,13 +357,13 @@ class AddGameCommand extends Command
             mkdir($mediaDir, 0755, true);
         }
 
-        // Process header image
+        // Process header image (1920x520)
         $headerFiles = $this->getImageFiles($this->inputHeaderDir);
         $headerFile = $headerFiles[0];
         $headerOutput = "{$this->gameSlug}_header.webp";
         $headerPath = "{$mediaDir}/{$headerOutput}";
 
-        if (!$this->processImage($headerFile, $headerPath, true)) {
+        if (!$this->processHeaderImage($headerFile, $headerPath)) {
             return false;
         }
 
@@ -398,6 +401,82 @@ class AddGameCommand extends Command
         $gameData['images'] = $images;
 
         $this->info("Processed " . count($images) . " screenshot(s)");
+
+        return true;
+    }
+
+    protected function processHeaderImage(string $inputPath, string $outputPath): bool
+    {
+        // Get image dimensions
+        $imageInfo = @getimagesize($inputPath);
+        if ($imageInfo === false) {
+            $this->error("Failed to read image: {$inputPath}");
+            return false;
+        }
+
+        $width = $imageInfo[0];
+        $height = $imageInfo[1];
+        $targetWidth = 1920;
+        $targetHeight = 520;
+        $targetAspectRatio = $targetWidth / $targetHeight; // 1920/520 = 3.6923...
+        $currentAspectRatio = $width / $height;
+
+        // Check if image is already the correct size
+        if ($width === $targetWidth && $height === $targetHeight) {
+            // Image is already correct size, just convert to WebP
+            $cmd = 'magick';
+            $cmd .= ' "' . str_replace('"', '\\"', $inputPath) . '"';
+            $cmd .= ' -quality 90';
+            $cmd .= ' -format webp';
+            $cmd .= ' "' . str_replace('"', '\\"', $outputPath) . '"';
+
+            exec($cmd, $output, $returnCode);
+            if ($returnCode === 0 && file_exists($outputPath)) {
+                return true;
+            }
+        }
+
+        // Calculate crop geometry if aspect ratio differs
+        $cropGeometry = '';
+        if (abs($currentAspectRatio - $targetAspectRatio) > 0.01) {
+            // Aspect ratios differ, need to crop
+            if ($currentAspectRatio > $targetAspectRatio) {
+                // Image is wider than target, crop horizontally
+                $newWidth = (int) ($height * $targetAspectRatio);
+                $xOffset = (int) (($width - $newWidth) / 2);
+                $cropGeometry = "{$newWidth}x{$height}+{$xOffset}+0";
+            } else {
+                // Image is taller than target, crop vertically
+                $newHeight = (int) ($width / $targetAspectRatio);
+                $yOffset = (int) (($height - $newHeight) / 2);
+                $cropGeometry = "{$width}x{$newHeight}+0+{$yOffset}";
+            }
+        }
+
+        // Build ImageMagick command
+        $cmd = 'magick';
+        $cmd .= ' "' . str_replace('"', '\\"', $inputPath) . '"';
+
+        if (!empty($cropGeometry)) {
+            $cmd .= " -crop {$cropGeometry}";
+        }
+
+        $cmd .= " -resize {$targetWidth}x{$targetHeight}";
+        $cmd .= ' -quality 90';
+        $cmd .= ' -format webp';
+        $cmd .= ' "' . str_replace('"', '\\"', $outputPath) . '"';
+
+        // Execute ImageMagick
+        exec($cmd, $output, $returnCode);
+
+        if ($returnCode !== 0 || !file_exists($outputPath)) {
+            $this->error("Failed to process header image: {$inputPath}");
+            $this->error("ImageMagick command: {$cmd}");
+            if (!empty($output)) {
+                $this->error("Output: " . implode("\n", $output));
+            }
+            return false;
+        }
 
         return true;
     }
@@ -483,12 +562,14 @@ class AddGameCommand extends Command
             return;
         }
 
+        // Find all ZIP files in download directory
         $downloadFiles = glob($this->inputDownloadDir . '/*.{zip,ZIP}', GLOB_BRACE) ?: [];
         if (empty($downloadFiles)) {
             return;
         }
 
         $this->info('Processing download files...');
+        $this->newLine();
 
         $downloads = [];
         $gamesDir = base_path("games/{$this->year}");
@@ -496,60 +577,69 @@ class AddGameCommand extends Command
             mkdir($gamesDir, 0755, true);
         }
 
-        foreach ($downloadFiles as $downloadFile) {
-            $fileName = basename($downloadFile);
-            $targetPath = "{$gamesDir}/{$fileName}";
+        // Platform options for selection
+        $platformOptions = [
+            '1' => 'Windows',
+            '2' => 'Linux',
+            '3' => 'macOS',
+            '4' => 'Web',
+        ];
 
-            // Copy file to games directory
+        foreach ($downloadFiles as $downloadFile) {
+            $originalFileName = basename($downloadFile);
+            
+            // Ask for platform interactively
+            $this->info("File: {$originalFileName}");
+            $this->line("Select platform:");
+            foreach ($platformOptions as $key => $platform) {
+                $this->line("  {$key}. {$platform}");
+            }
+            
+            $selected = $this->ask('Platform (1-4)', '1');
+            $platform = $platformOptions[$selected] ?? $platformOptions['1'];
+            
+            // Generate new filename: {slug}-{Platform}.zip
+            $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
+            $newFileName = "{$this->gameSlug}-{$platform}.{$extension}";
+            $targetPath = "{$gamesDir}/{$newFileName}";
+            
+            // Check if target file already exists
+            if (file_exists($targetPath)) {
+                if (!$this->confirm("File {$newFileName} already exists. Overwrite?", false)) {
+                    $this->warn("Skipping {$originalFileName}");
+                    continue;
+                }
+            }
+
+            // Copy file to games directory with new name
             if (!copy($downloadFile, $targetPath)) {
-                $this->warn("Failed to copy download file: {$fileName}");
+                $this->warn("Failed to copy download file: {$originalFileName}");
                 continue;
             }
 
             // Calculate checksum
             $checksum = hash_file('sha256', $targetPath);
             if ($checksum === false) {
-                $this->warn("Failed to calculate checksum for: {$fileName}");
+                $this->warn("Failed to calculate checksum for: {$newFileName}");
+                @unlink($targetPath);
                 continue;
             }
 
-            // Determine platform from filename
-            $platform = $this->detectPlatform($fileName);
-
             $downloads[] = [
-                'file' => $fileName,
+                'file' => $newFileName,
                 'platform' => $platform,
                 'checksum' => $checksum,
             ];
 
+            $this->info("  ✓ Processed: {$originalFileName} → {$newFileName} ({$platform})");
             $this->processedFiles[] = $downloadFile;
+            $this->newLine();
         }
 
         if (!empty($downloads)) {
             $gameData['download'] = $downloads;
             $this->info("Processed " . count($downloads) . " download file(s)");
         }
-    }
-
-    protected function detectPlatform(string $fileName): string
-    {
-        $lower = strtolower($fileName);
-
-        if (str_contains($lower, 'win') || str_ends_with($lower, '.zip')) {
-            return 'Windows';
-        }
-        if (str_contains($lower, 'mac')) {
-            return 'macOS';
-        }
-        if (str_contains($lower, 'linux')) {
-            return 'Linux';
-        }
-        if (str_contains($lower, 'web')) {
-            return 'Web';
-        }
-
-        // Default to Windows if no platform indicator
-        return 'Windows';
     }
 
     protected function gameExists(string $gameName): bool
