@@ -617,7 +617,15 @@ class AddGameCommand extends Command
             $entry['download'] = $gameData['download'];
         }
 
+        // Add new entry
         $data[] = $entry;
+
+        // Sort all entries alphabetically by game name (case-insensitive)
+        usort($data, function (array $a, array $b): int {
+            $nameA = $a['game']['name'] ?? '';
+            $nameB = $b['game']['name'] ?? '';
+            return strcasecmp($nameA, $nameB);
+        });
 
         // Write YAML with proper formatting
         $yamlContent = Yaml::dump($data, 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
