@@ -73,7 +73,7 @@ class ConvertImagesCommand extends Command
         $this->info("Converting images to {$targetFormat} format...");
         $this->info(str_repeat("=", 80));
 
-        // Process all YAML files
+        // STEP 1: Process all games YAML files (years)
         $yamlFiles = glob('_data/games/games*.yaml');
         
         foreach ($yamlFiles as $yamlFile) {
@@ -179,7 +179,15 @@ class ConvertImagesCommand extends Command
             }
         }
 
-        // Also check root _media directory for global images
+        // STEP 2: Process all other YAML files in _data/ directory
+        $this->info("\nProcessing other YAML files in _data/...");
+        $this->processAllYamlFiles($targetFormat, $dryRun);
+
+        // STEP 3: Process all Blade templates
+        $this->info("\nProcessing Blade templates...");
+        $this->processBladeTemplates($targetFormat, $dryRun);
+
+        // STEP 4: Process root _media directory (LAST - after all references are updated)
         $this->info("\nProcessing root _media directory...");
         // Only process known image file extensions
         $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
@@ -196,13 +204,6 @@ class ConvertImagesCommand extends Command
             }
             
             $this->convertImageFile(null, basename($file), $targetFormat, $dryRun, '_media');
-        }
-
-        // Update homepage.yaml if it exists
-        $homepageYaml = '_data/homepage.yaml';
-        if (file_exists($homepageYaml)) {
-            $this->info("\nProcessing homepage.yaml...");
-            $this->updateHomepageYaml($homepageYaml, $targetFormat, $dryRun);
         }
 
         // Summary
@@ -283,6 +284,17 @@ class ConvertImagesCommand extends Command
 
         $oldPath = "{$mediaDir}/{$filename}";
         
+        // Check if file already exists in target format (may have been converted previously)
+        $pathInfo = pathinfo($filename);
+        $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
+        $targetPath = "{$mediaDir}/{$targetFile}";
+        
+        // If target file already exists, return it (file was already converted)
+        if (file_exists($targetPath) && $targetPath !== $oldPath) {
+            $this->skippedCount++;
+            return $targetFile;
+        }
+        
         if (!file_exists($oldPath)) {
             $this->warn("  ⚠ File not found: {$oldPath}");
             $this->errorCount++;
@@ -328,8 +340,9 @@ class ConvertImagesCommand extends Command
             return null;
         }
 
-        // Delete old file if conversion successful
-        if ($oldPath !== $newPath) {
+        // Delete old file ONLY if conversion was successful AND new file exists
+        // This prevents deleting the original if conversion failed
+        if ($oldPath !== $newPath && file_exists($newPath)) {
             @unlink($oldPath);
         }
 
@@ -414,6 +427,159 @@ class ConvertImagesCommand extends Command
             $this->updatedYamlFiles[] = $yamlFile;
         } elseif ($modified && $dryRun) {
             $this->info("  [DRY RUN] Would update {$yamlFile}");
+        }
+    }
+
+    protected function processAllYamlFiles(string $targetFormat, bool $dryRun): void
+    {
+        // Find all YAML files in _data/ directory (excluding games subdirectory which is already processed)
+        $yamlFiles = array_merge(
+            glob('_data/*.yaml'),
+            glob('_data/*.yml')
+        );
+
+        foreach ($yamlFiles as $yamlFile) {
+            // Skip games files (already processed)
+            if (strpos($yamlFile, '_data/games/') !== false) {
+                continue;
+            }
+
+            $this->info("  Processing {$yamlFile}...");
+            $this->processYamlFile($yamlFile, $targetFormat, $dryRun);
+        }
+    }
+
+    protected function processYamlFile(string $yamlFile, string $targetFormat, bool $dryRun): void
+    {
+        $data = Yaml::parseFile($yamlFile) ?? [];
+        
+        if (!is_array($data)) {
+            return;
+        }
+
+        $modified = false;
+
+        // Recursively process all values in the YAML structure
+        $data = $this->processYamlData($data, $targetFormat, $dryRun, $yamlFile, $modified);
+
+        // Save updated YAML if modified
+        if ($modified && !$dryRun) {
+            $yamlContent = Yaml::dump($data, 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+            file_put_contents($yamlFile, $yamlContent);
+            $this->info("    ✓ Updated {$yamlFile}");
+            $this->updatedYamlFiles[] = $yamlFile;
+        } elseif ($modified && $dryRun) {
+            $this->info("    [DRY RUN] Would update {$yamlFile}");
+        }
+    }
+
+    protected function processYamlData(array $data, string $targetFormat, bool $dryRun, string $yamlFile, bool &$modified): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = $this->processYamlData($value, $targetFormat, $dryRun, $yamlFile, $modified);
+            } elseif (is_string($value)) {
+                // Check if this looks like an image filename
+                $ext = strtolower(pathinfo($value, PATHINFO_EXTENSION));
+                $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
+                
+                if (in_array($ext, $imageExtensions) && $ext !== 'svg') {
+                    // Try to convert (for root _media files, year is null)
+                    $newValue = $this->convertImageFile(null, $value, $targetFormat, $dryRun, '_media');
+                    if ($newValue && $newValue !== $value) {
+                        $data[$key] = $newValue;
+                        $modified = true;
+                    }
+                }
+            }
+        }
+
+        return $data;
+    }
+
+    protected function processBladeTemplates(string $targetFormat, bool $dryRun): void
+    {
+        $bladeFiles = array_merge(
+            glob('_pages/**/*.blade.php'),
+            glob('resources/views/**/*.blade.php')
+        );
+
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
+        
+        // List of known image files in _media root that should be converted
+        // (exclude favicons and icons that should stay PNG)
+        $knownRootImages = [
+            'gamejam_about', 'gamejam_footer', 'gamejam_header', 'gamejam_index_1', 
+            'gamejam_index_2', 'gamejam_index_3', 'gamejam_video', 'video_bg',
+            'sponsor_freistaedter', 'gamejam_logo_fhooe', 'gamejam_logo_pie',
+            '404', '404_text'
+        ];
+        
+        foreach ($bladeFiles as $bladeFile) {
+            $content = file_get_contents($bladeFile);
+            $originalContent = $content;
+            $modified = false;
+
+            // Find all image references in the file
+            // Pattern: matches image filenames with extensions in quotes or as strings
+            // Also matches URLs like /media/filename.jpg
+            $pattern = '/(["\']?)(\/media\/)?([a-zA-Z0-9_-]+\.(?:' . implode('|', $imageExtensions) . '))(\1|["\'])/i';
+            
+            preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
+            
+            foreach ($matches as $match) {
+                $quote1 = $match[1] ?? '';
+                $mediaPath = $match[2] ?? '';
+                $imageFile = $match[3] ?? '';
+                $quote2 = $match[4] ?? '';
+                
+                if (empty($imageFile)) {
+                    continue;
+                }
+                
+                $ext = strtolower(pathinfo($imageFile, PATHINFO_EXTENSION));
+                
+                // Skip SVG and ICO
+                if ($ext === 'svg' || $ext === 'ico') {
+                    continue;
+                }
+
+                // Skip favicons and small icons (they should stay PNG)
+                if (preg_match('/^(favicon|apple-touch-icon|android-chrome)/i', $imageFile)) {
+                    continue;
+                }
+
+                // Check if file exists in _media root OR if it's already converted
+                $pathInfo = pathinfo($imageFile);
+                $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
+                
+                // Build the original match string for replacement
+                $originalMatch = $match[0];
+                
+                if (file_exists("_media/{$imageFile}")) {
+                    $newFile = $this->convertImageFile(null, $imageFile, $targetFormat, $dryRun, '_media');
+                    
+                    if ($newFile && $newFile !== $imageFile) {
+                        // Replace with same structure
+                        $newMatch = $quote1 . $mediaPath . $newFile . $quote2;
+                        $content = str_replace($originalMatch, $newMatch, $content);
+                        $modified = true;
+                    }
+                } elseif (file_exists("_media/{$targetFile}") && $targetFile !== $imageFile) {
+                    // File already converted, just update reference
+                    $newMatch = $quote1 . $mediaPath . $targetFile . $quote2;
+                    $content = str_replace($originalMatch, $newMatch, $content);
+                    $modified = true;
+                }
+            }
+
+            // Save if modified
+            if ($modified && !$dryRun) {
+                file_put_contents($bladeFile, $content);
+                $this->info("  ✓ Updated {$bladeFile}");
+            } elseif ($modified && $dryRun) {
+                $this->info("  [DRY RUN] Would update {$bladeFile}");
+            }
         }
     }
 }
