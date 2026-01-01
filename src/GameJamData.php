@@ -3,7 +3,7 @@
 namespace App;
 
 /**
- * Helper class to load Game Jam data from YAML and Markdown files
+ * Helper class to load Game Jam data from YAML files
  */
 class GameJamData
 {
@@ -60,21 +60,15 @@ class GameJamData
      */
     public static function getJam(int $year): ?array
     {
-        $markdownFile = base_path("_data/jams/{$year}.md");
+        $yamlFile = base_path("_data/jams/{$year}.yaml");
         
-        if (!file_exists($markdownFile)) {
+        if (!file_exists($yamlFile)) {
             return null;
         }
 
-        $content = file_get_contents($markdownFile);
-        $frontMatter = [];
+        $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
         
-        // Match front matter with optional newline after closing ---
-        if (preg_match('/^---\s*\n(.*?)\n---\s*(?:\n|$)/s', $content, $matches)) {
-            $frontMatter = \Symfony\Component\Yaml\Yaml::parse($matches[1]) ?? [];
-        }
-        
-        return $frontMatter;
+        return is_array($data) ? $data : null;
     }
 
     /**
@@ -83,11 +77,11 @@ class GameJamData
     public static function getAvailableYears(): array
     {
         // Discover years from data files so we don't need to hardcode them.
-        $files = glob(base_path('_data/jams/*.md')) ?: [];
+        $files = glob(base_path('_data/jams/*.yaml')) ?: [];
 
         $years = [];
         foreach ($files as $file) {
-            $name = basename($file, '.md');
+            $name = basename($file, '.yaml');
             if (preg_match('/^\d{4}$/', $name)) {
                 $years[] = (int) $name;
             }

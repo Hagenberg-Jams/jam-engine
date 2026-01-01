@@ -18,7 +18,7 @@ use function glob;
  * Command to create a new Game Jam year with metadata file and empty games YAML.
  *
  * This command interactively asks for all required data and creates:
- * - `_data/jams/{year}.md` with front matter
+ * - `_data/jams/{year}.yaml` with jam metadata
  * - `_data/games/games{year}.yaml` (empty or with comment)
  */
 class CreateGameJamCommand extends Command
@@ -39,7 +39,7 @@ class CreateGameJamCommand extends Command
         }
 
         // Check if year already exists
-        $jamFile = base_path("_data/jams/{$year}.md");
+        $jamFile = base_path("_data/jams/{$year}.yaml");
         if (file_exists($jamFile)) {
             if (!$this->confirm("Jam for year {$year} already exists. Overwrite?", false)) {
                 $this->info('Cancelled.');
@@ -54,7 +54,7 @@ class CreateGameJamCommand extends Command
         $endDate = $this->askForDate('End date', 'YYYY-MM-DD');
         $hours = (int) $this->ask('Duration in hours (e.g., 36, 48)', '36');
 
-        // Create jam MD file
+        // Create jam YAML file
         $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours);
 
         // Create empty games YAML file
@@ -74,7 +74,7 @@ class CreateGameJamCommand extends Command
 
         $this->newLine();
         $this->info("Successfully created Game Jam {$year}!");
-        $this->info("  - Jam metadata: _data/jams/{$year}.md");
+        $this->info("  - Jam metadata: _data/jams/{$year}.yaml");
         $this->info("  - Games data: _data/games/games{$year}.yaml");
         $this->info("  - Archive: Will appear in '{$decadeLabel}' navigation menu");
         
@@ -127,23 +127,24 @@ class CreateGameJamCommand extends Command
 
     protected function createJamFile(int $year, string $title, string $topic, string $startDate, string $endDate, int $hours): void
     {
-        $content = "---\n";
-        $content .= "title: \"{$title}\"\n";
-        $content .= "topic: \"{$topic}\"\n";
-        $content .= "startdate: {$startDate}\n";
-        $content .= "enddate: {$endDate}\n";
-        $content .= "hours: {$hours}\n";
-        $content .= "data: games{$year}\n";
-        $content .= "---\n";
+        $data = [
+            'title' => $title,
+            'topic' => $topic,
+            'startdate' => $startDate,
+            'enddate' => $endDate,
+            'hours' => $hours,
+            'data' => "games{$year}",
+        ];
 
-        $file = base_path("_data/jams/{$year}.md");
+        $file = base_path("_data/jams/{$year}.yaml");
         $dir = dirname($file);
 
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        file_put_contents($file, $content);
+        $yamlContent = \Symfony\Component\Yaml\Yaml::dump($data, 2, 2);
+        file_put_contents($file, $yamlContent);
         $this->info("Created jam metadata file: {$file}");
     }
 

@@ -25,7 +25,7 @@ use function sort;
  * Pre-build task to generate Game Jam year pages and game detail pages from data files.
  *
  * This makes `php hyde build` behave like the old Jekyll generator:
- * - For every `_data/jams/{year}.md`, register an InMemoryPage with identifier `{year}`
+ * - For every `_data/jams/{year}.yaml`, register an InMemoryPage with identifier `{year}`
  * - For every game in `_data/games/games{year}.yaml`, register an InMemoryPage with identifier `{year}/{slug}`
  */
 class GenerateGameJamPagesBuildTask extends PreBuildTask
@@ -53,11 +53,11 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
     /** @return array<int> */
     protected function discoverYears(): array
     {
-        // Prefer discovering from _data/jams/*.md so the data files are the source of truth.
-        $files = glob(base_path('_data/jams/*.md')) ?: [];
+        // Prefer discovering from _data/jams/*.yaml so the data files are the source of truth.
+        $files = glob(base_path('_data/jams/*.yaml')) ?: [];
 
         $years = array_filter(array_map(function (string $file): ?int {
-            $name = basename($file, '.md');
+            $name = basename($file, '.yaml');
             if (preg_match('/^\d{4}$/', $name) === 1) {
                 return (int) $name;
             }

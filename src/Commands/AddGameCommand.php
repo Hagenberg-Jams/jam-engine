@@ -133,11 +133,11 @@ class AddGameCommand extends Command
         }
 
         // Discover available years
-        $files = glob(base_path('_data/jams/*.md')) ?: [];
+        $files = glob(base_path('_data/jams/*.yaml')) ?: [];
         $years = [];
 
         foreach ($files as $file) {
-            if (preg_match('/(\d{4})\.md$/', $file, $matches)) {
+            if (preg_match('/(\d{4})\.yaml$/', $file, $matches)) {
                 $years[] = (int) $matches[1];
             }
         }
