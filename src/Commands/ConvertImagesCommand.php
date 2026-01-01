@@ -121,6 +121,9 @@ class ConvertImagesCommand extends Command
 
                 // Process images
                 if (isset($entry['images']) && is_array($entry['images'])) {
+                    $imageCount = 0;
+                    $thumbCount = 0;
+                    
                     foreach ($entry['images'] as $imgIndex => $image) {
                         if (isset($image['file'])) {
                             $oldFile = $image['file'];
@@ -129,6 +132,7 @@ class ConvertImagesCommand extends Command
                             if ($newFile && $newFile !== $oldFile) {
                                 $data[$index]['images'][$imgIndex]['file'] = $newFile;
                                 $modified = true;
+                                $imageCount++;
                             }
                         }
 
@@ -139,6 +143,25 @@ class ConvertImagesCommand extends Command
                             if ($newThumb && $newThumb !== $oldThumb) {
                                 $data[$index]['images'][$imgIndex]['thumb'] = $newThumb;
                                 $modified = true;
+                                $thumbCount++;
+                            }
+                        }
+                    }
+                    
+                    // Show summary for images/thumbs if any were converted
+                    if ($imageCount > 0 || $thumbCount > 0) {
+                        $summary = [];
+                        if ($imageCount > 0) {
+                            $summary[] = "{$imageCount} image(s)";
+                        }
+                        if ($thumbCount > 0) {
+                            $summary[] = "{$thumbCount} thumbnail(s)";
+                        }
+                        if (!empty($summary)) {
+                            if ($dryRun) {
+                                $this->line("  [DRY RUN] {$gameName}: " . implode(', ', $summary) . " would be converted");
+                            } else {
+                                $this->line("  ✓ {$gameName}: " . implode(', ', $summary) . " converted");
                             }
                         }
                     }
@@ -158,7 +181,8 @@ class ConvertImagesCommand extends Command
 
         // Also check root _media directory for global images
         $this->info("\nProcessing root _media directory...");
-        // Get all files (not just specific extensions - let ImageMagick handle format detection)
+        // Only process known image file extensions
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
         $rootFiles = glob('_media/*');
         foreach ($rootFiles as $file) {
             if (is_dir($file)) {
@@ -166,8 +190,8 @@ class ConvertImagesCommand extends Command
             }
             
             $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-            // Skip non-image files, SVG, and ICO
-            if (empty($ext) || $ext === 'svg' || $ext === 'ico' || $ext === 'manifest') {
+            // Only process known image formats, skip SVG, ICO, CSS, JS, manifest, etc.
+            if (empty($ext) || !in_array($ext, $imageExtensions)) {
                 continue;
             }
             
@@ -231,6 +255,12 @@ class ConvertImagesCommand extends Command
         // Skip SVG files (vector graphics)
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if ($ext === 'svg') {
+            return $filename;
+        }
+
+        // Additional safety check: skip known non-image file types
+        $nonImageExtensions = ['css', 'js', 'json', 'xml', 'html', 'htm', 'txt', 'md', 'manifest', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'otf'];
+        if (in_array($ext, $nonImageExtensions)) {
             return $filename;
         }
 
