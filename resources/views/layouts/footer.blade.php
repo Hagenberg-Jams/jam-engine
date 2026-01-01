@@ -11,8 +11,7 @@
 
 <footer class="bg-gray-800 text-white mt-auto">
     <!-- Footer Widget Area -->
-        <div class="bg-cover bg-center relative" style="background-image: url('/media/gamejam_footer.jpg');">
-        <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+        <div class="bg-gray-800 relative">
         <div class="container mx-auto px-4 py-16 relative z-10">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Logo -->
