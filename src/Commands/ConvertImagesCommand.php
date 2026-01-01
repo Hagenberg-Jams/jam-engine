@@ -22,11 +22,13 @@ use function unlink;
  * Command to convert all pixel images to a target format.
  *
  * This command:
- * - Converts all pixel images (JPG, PNG, GIF) to a target format (e.g., webp)
- * - Skips SVG files (vector graphics)
+ * - Converts all pixel images to any format supported by ImageMagick (webp, avif, jpg, png, etc.)
+ * - Automatically detects if ImageMagick supports the target format
+ * - Skips SVG files (vector graphics are preserved)
  * - Skips images that are already in the target format
  * - Updates all YAML files that reference the converted images
  * - Uses ImageMagick system-wide
+ * - Future-proof: works with any format ImageMagick supports (e.g., AVIF, HEIC, JXL)
  */
 class ConvertImagesCommand extends Command
 {
@@ -49,18 +51,18 @@ class ConvertImagesCommand extends Command
         $yearFilter = $this->option('year');
         $dryRun = $this->option('dry-run');
 
-        // Validate format
-        $validFormats = ['webp', 'jpg', 'jpeg', 'png', 'gif'];
-        if (!in_array($targetFormat, $validFormats)) {
-            $this->error("Invalid format: {$targetFormat}. Valid formats: " . implode(', ', $validFormats));
-            return 1;
-        }
-
         // Check ImageMagick
         exec('magick -version', $output, $returnCode);
         if ($returnCode !== 0) {
             $this->error('ImageMagick is not installed or not available in PATH.');
             $this->info('Please install ImageMagick: https://imagemagick.org/script/download.php');
+            return 1;
+        }
+
+        // Validate format by checking if ImageMagick supports it
+        if (!$this->isFormatSupported($targetFormat)) {
+            $this->error("ImageMagick does not support the format: {$targetFormat}");
+            $this->info('Use "magick -list format" to see all supported formats.');
             return 1;
         }
 
@@ -109,7 +111,11 @@ class ConvertImagesCommand extends Command
                     if ($newHeader && $newHeader !== $oldHeader) {
                         $data[$index]['headerimage'] = $newHeader;
                         $modified = true;
-                        $this->line("  ✓ {$gameName}: Header converted");
+                        if ($dryRun) {
+                            $this->line("  [DRY RUN] {$gameName}: Header would be converted");
+                        } else {
+                            $this->line("  ✓ {$gameName}: Header converted");
+                        }
                     }
                 }
 
@@ -152,11 +158,19 @@ class ConvertImagesCommand extends Command
 
         // Also check root _media directory for global images
         $this->info("\nProcessing root _media directory...");
-        $rootFiles = glob('_media/*.{jpg,jpeg,png,gif,webp}', GLOB_BRACE);
+        // Get all files (not just specific extensions - let ImageMagick handle format detection)
+        $rootFiles = glob('_media/*');
         foreach ($rootFiles as $file) {
             if (is_dir($file)) {
                 continue;
             }
+            
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            // Skip non-image files, SVG, and ICO
+            if (empty($ext) || $ext === 'svg' || $ext === 'ico' || $ext === 'manifest') {
+                continue;
+            }
+            
             $this->convertImageFile(null, basename($file), $targetFormat, $dryRun, '_media');
         }
 
@@ -180,16 +194,52 @@ class ConvertImagesCommand extends Command
         return $this->errorCount > 0 ? 1 : 0;
     }
 
+    protected function isFormatSupported(string $format): bool
+    {
+        // Get list of supported formats from ImageMagick
+        exec('magick -list format', $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            // Fallback: assume common formats are supported
+            $commonFormats = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'avif', 'heic', 'heif', 'jxl'];
+            return in_array(strtolower($format), $commonFormats);
+        }
+
+        // Parse ImageMagick format list
+        // Format list looks like: "     WEBP* WEBP      rw+   WebP Image Format"
+        // We need to match the format name in the first column (may have * suffix)
+        $formatUpper = strtoupper($format);
+        $formatPattern = '/^\s*' . preg_quote($formatUpper, '/') . '\*?\s+/i';
+        
+        foreach ($output as $line) {
+            // Skip header lines
+            if (preg_match('/^Format\s+Module/i', $line) || preg_match('/^-+$/', $line)) {
+                continue;
+            }
+            
+            // Check if line starts with the format name (with optional * and spaces)
+            if (preg_match($formatPattern, $line)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function convertImageFile(?string $year, string $filename, string $targetFormat, bool $dryRun, ?string $baseDir = null): ?string
     {
-        // Skip SVG files
+        // Skip SVG files (vector graphics)
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         if ($ext === 'svg') {
             return $filename;
         }
 
+        // Normalize format for comparison (jpg/jpeg are equivalent)
+        $normalizedExt = $this->normalizeFormat($ext);
+        $normalizedTarget = $this->normalizeFormat($targetFormat);
+
         // Check if already in target format
-        if ($ext === $targetFormat || ($targetFormat === 'jpg' && $ext === 'jpeg') || ($targetFormat === 'jpeg' && $ext === 'jpg')) {
+        if ($normalizedExt === $normalizedTarget) {
             $this->skippedCount++;
             return $filename;
         }
@@ -231,7 +281,7 @@ class ConvertImagesCommand extends Command
         $cmd .= ' "' . str_replace('"', '\\"', $oldPath) . '"';
         
         // Set quality for lossy formats
-        if (in_array($targetFormat, ['webp', 'jpg', 'jpeg'])) {
+        if ($this->isLossyFormat($targetFormat)) {
             $cmd .= ' -quality 90';
         }
         
@@ -255,6 +305,23 @@ class ConvertImagesCommand extends Command
 
         $this->convertedCount++;
         return $newFilename;
+    }
+
+    protected function normalizeFormat(string $format): string
+    {
+        // Normalize jpg/jpeg to a common format for comparison
+        $format = strtolower($format);
+        if ($format === 'jpg' || $format === 'jpeg') {
+            return 'jpg';
+        }
+        return $format;
+    }
+
+    protected function isLossyFormat(string $format): bool
+    {
+        // Common lossy formats that benefit from quality setting
+        $lossyFormats = ['webp', 'jpg', 'jpeg', 'avif', 'heic', 'heif', 'jxl'];
+        return in_array(strtolower($format), $lossyFormats);
     }
 
     protected function updateHomepageYaml(string $yamlFile, string $targetFormat, bool $dryRun): void
