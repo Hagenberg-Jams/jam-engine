@@ -3,6 +3,7 @@
 @section('content')
 @php
     $persons = $persons ?? [];
+    $totalJams = count(\App\GameJamData::getAvailableYears());
 @endphp
 
 <!-- Page Header -->
@@ -10,7 +11,7 @@
     <div class="container mx-auto px-4">
         <h1 class="text-4xl md:text-5xl font-bold mb-2">People of the Hagenberg Game Jam</h1>
         <p class="text-xl text-indigo-200">
-            {{ count($persons) }} Participant{{ count($persons) !== 1 ? 's' : '' }}
+            {{ count($persons) }} Participant{{ count($persons) !== 1 ? 's' : '' }} in {{ $totalJams }} Game Jam{{ $totalJams !== 1 ? 's' : '' }}
         </p>
     </div>
 </section>
