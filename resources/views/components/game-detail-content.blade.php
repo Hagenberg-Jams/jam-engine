@@ -23,7 +23,17 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Players</h3>
-                <p class="text-xl font-bold dark:text-white">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</p>
+                <p class="text-xl font-bold dark:text-white">
+                    @php
+                        // Format players display: support ranges like "3-8" or single numbers
+                        if (preg_match('/^(\d+)-(\d+)$/', (string) $players, $matches)) {
+                            echo $matches[1] . '–' . $matches[2] . ' Players';
+                        } else {
+                            $playerCount = (int) $players;
+                            echo $playerCount . ' Player' . ($playerCount !== 1 ? 's' : '');
+                        }
+                    @endphp
+                </p>
             </div>
             <div class="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
                 <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Input</h3>

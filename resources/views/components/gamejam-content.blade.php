@@ -137,7 +137,14 @@
                 $gameName = $game['name'] ?? 'Unknown Game';
                 $gameSlug = \Illuminate\Support\Str::slug($gameName ?? 'unknown');
                 $players = $game['players'] ?? 1;
-                $playerClass = $players == 1 ? 'singleplayer' : 'multiplayer';
+                // Extract minimum player count for filtering (handle ranges like "3-8")
+                $minPlayers = 1;
+                if (preg_match('/^(\d+)-(\d+)$/', (string) $players, $matches)) {
+                    $minPlayers = (int) $matches[1];
+                } else {
+                    $minPlayers = (int) $players;
+                }
+                $playerClass = $minPlayers == 1 ? 'singleplayer' : 'multiplayer';
                 $controls = $game['controls'] ?? [];
                 $controlClasses = implode(' ', array_map('strtolower', $controls));
                 $description = $game['description'] ?? '';
@@ -176,7 +183,17 @@
                     </h3>
                     <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{{ \Illuminate\Support\Str::limit(strip_tags($description), 100) }}</p>
                     <div class="flex gap-2 flex-wrap mb-4">
-                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{{ $players }} Player{{ $players > 1 ? 's' : '' }}</span>
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
+                            @php
+                                // Format players display: support ranges like "3-8" or single numbers
+                                if (preg_match('/^(\d+)-(\d+)$/', (string) $players, $matches)) {
+                                    echo $matches[1] . '–' . $matches[2] . ' Players';
+                                } else {
+                                    $playerCount = (int) $players;
+                                    echo $playerCount . ' Player' . ($playerCount !== 1 ? 's' : '');
+                                }
+                            @endphp
+                        </span>
                         @foreach($controls as $control)
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded capitalize">{{ $control }}</span>
                         @endforeach

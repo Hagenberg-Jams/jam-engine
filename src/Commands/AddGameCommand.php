@@ -203,10 +203,8 @@ class AddGameCommand extends Command
             return null;
         }
 
-        $players = (int) $this->ask('Number of players', '1');
-        if ($players < 1) {
-            $players = 1;
-        }
+        $playersInput = $this->ask('Number of players (e.g., "1", "2-4", "3-8")', '1');
+        $players = $this->parsePlayersInput($playersInput);
 
         $controls = $this->askForControls();
         $description = $this->askForDescription();
@@ -297,6 +295,29 @@ class AddGameCommand extends Command
         }
 
         return $members;
+    }
+
+    protected function parsePlayersInput(string $input): string
+    {
+        $input = trim($input);
+        
+        // Check if it's a range (e.g., "3-8", "2-4")
+        if (preg_match('/^(\d+)\s*-\s*(\d+)$/', $input, $matches)) {
+            $min = (int) $matches[1];
+            $max = (int) $matches[2];
+            if ($min > 0 && $max >= $min) {
+                return "{$min}-{$max}";
+            }
+        }
+        
+        // Check if it's a single number
+        $single = (int) $input;
+        if ($single > 0) {
+            return (string) $single;
+        }
+        
+        // Default to 1 if invalid
+        return '1';
     }
 
     protected function parseTeamMembers(string $input): array
