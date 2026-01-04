@@ -47,6 +47,12 @@
     $ogMeta = (new \App\Helpers\OpenGraphMeta())->getMetaTags($ogContext);
 @endphp
 
+{{-- Meta Description (separate from OG for better SEO) --}}
+<meta name="description" content="{{ $ogMeta['description'] }}">
+
+{{-- Canonical URL --}}
+<link rel="canonical" href="{{ $ogMeta['url'] }}">
+
 {{-- Open Graph Tags --}}
 <meta property="og:type" content="{{ $ogMeta['type'] }}">
 <meta property="og:title" content="{{ $ogMeta['title'] }}">
