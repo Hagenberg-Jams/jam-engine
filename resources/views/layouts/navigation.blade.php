@@ -68,7 +68,7 @@
 
             {{-- 2) Latest Jam --}}
             <li class="md:mx-2">
-                <x-hyde::navigation.navigation-link :item="NavigationItem::create($latestJam, $latestJam, 10)"/>
+                <x-navigation.navigation-link :item="NavigationItem::create($latestJam, $latestJam, 10)"/>
             </li>
 
             {{-- 3) Archive Dropdowns (grouped by decade) --}}
@@ -85,17 +85,17 @@
 
             {{-- 4) People --}}
             <li class="md:mx-2">
-                <x-hyde::navigation.navigation-link :item="NavigationItem::create('people', 'People', 15)"/>
+                <x-navigation.navigation-link :item="NavigationItem::create('people', 'People', 15)"/>
             </li>
 
             {{-- 5) Rules --}}
             <li class="md:mx-2">
-                <x-hyde::navigation.navigation-link :item="NavigationItem::create('rules', 'Rules', 20)"/>
+                <x-navigation.navigation-link :item="NavigationItem::create('rules', 'Rules', 20)"/>
             </li>
 
             {{-- 5) Imprint --}}
             <li class="md:mx-2">
-                <x-hyde::navigation.navigation-link :item="NavigationItem::create('imprint', 'Imprint', 30)"/>
+                <x-navigation.navigation-link :item="NavigationItem::create('imprint', 'Imprint', 30)"/>
             </li>
         </ul>
     </div>

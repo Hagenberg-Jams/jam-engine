@@ -33,7 +33,7 @@
             @isset($items)
                 @foreach ($items as $item)
                     <li class="whitespace-nowrap">
-                        <x-hyde::navigation.navigation-link :item="$item"/>
+                        <x-navigation.navigation-link :item="$item"/>
                     </li>
                 @endforeach
             @else
