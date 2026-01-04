@@ -321,11 +321,11 @@ class AddGameCommand extends Command
             }
         }
 
-        // Clean up: remove empty entries, normalize whitespace, remove "- " prefix
+        // Clean up: remove empty entries, normalize whitespace, remove markdown list prefixes
         $members = array_filter(array_map(function ($m) {
             $m = trim($m);
-            // Remove "- " prefix if present (for markdown list format)
-            $m = preg_replace('/^-\s+/', '', $m);
+            // Remove markdown list prefixes: "- ", "* ", "+ " (for unordered lists)
+            $m = preg_replace('/^[-*+]\s+/', '', $m);
             return preg_replace('/\s+/', ' ', $m);
         }, $members));
 
