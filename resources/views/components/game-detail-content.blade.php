@@ -56,7 +56,16 @@
                     $paragraphs = preg_split('/\n\s*\n/', trim($description));
                 @endphp
                 @foreach($paragraphs as $paragraph)
-                    <p>{!! nl2br(e(trim($paragraph))) !!}</p>
+                    @php
+                        // Convert single line breaks to markdown hard breaks (two spaces + newline)
+                        // This allows markdown to convert them to <br> while also processing links
+                        $paragraphWithHardBreaks = preg_replace('/([^\n])\n([^\n])/', '$1  \n$2', trim($paragraph));
+                        // Process markdown (converts links and hard breaks)
+                        $htmlContent = \Illuminate\Support\Str::markdown($paragraphWithHardBreaks);
+                        // Remove wrapping <p> tag if markdown added one (we add our own)
+                        $htmlContent = preg_replace('/^<p>(.*)<\/p>$/s', '$1', $htmlContent);
+                    @endphp
+                    <p>{!! $htmlContent !!}</p>
                 @endforeach
             </div>
         </div>
