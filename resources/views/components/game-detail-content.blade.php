@@ -50,7 +50,15 @@
         <!-- Description -->
         <div class="prose prose-lg dark:prose-invert max-w-none mb-12">
             <h2 class="text-3xl font-bold mb-6 dark:text-white">About the Game</h2>
-            <div class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ $description }}</div>
+            <div class="text-gray-700 dark:text-gray-300">
+                @php
+                    // Split by double line breaks (paragraphs)
+                    $paragraphs = preg_split('/\n\s*\n/', trim($description));
+                @endphp
+                @foreach($paragraphs as $paragraph)
+                    <p>{!! nl2br(e(trim($paragraph))) !!}</p>
+                @endforeach
+            </div>
         </div>
 
         <!-- Team Members -->
