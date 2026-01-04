@@ -15,6 +15,12 @@
 
 @import 'tailwindcss';
 
+/* Import Swiper CSS */
+@import 'swiper/css';
+
+/* Import GLightbox CSS */
+@import 'glightbox/dist/css/glightbox.css';
+
 @config '../../tailwind.config.js';
 
 /* Hero Slider Styles */
@@ -63,4 +69,75 @@
 .hero-slide.active {
     opacity: 1;
     z-index: 2;
+}
+
+/* Masonry Gallery Styles */
+.masonry-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 200px;
+    gap: 1rem;
+}
+
+.masonry-item {
+    overflow: hidden;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.masonry-item:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.masonry-item.row-span-2 {
+    grid-row: span 2;
+}
+
+.masonry-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.masonry-item:hover .masonry-image {
+    transform: scale(1.05);
+}
+
+@media (max-width: 1024px) {
+    .masonry-gallery {
+        grid-auto-rows: 150px;
+    }
+}
+
+@media (max-width: 640px) {
+    .masonry-gallery {
+        grid-template-columns: 1fr;
+        grid-auto-rows: 200px;
+    }
+    
+    .masonry-item.row-span-2 {
+        grid-row: span 1;
+    }
+}
+
+/* Swiper Sponsors Slider Styles */
+.sponsors-slider {
+    width: 100%;
+    padding-bottom: 2rem;
+    overflow: hidden;
+}
+
+.sponsors-slider .swiper-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+}
+
+.sponsors-slider .swiper-slide {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: auto;
+    flex-shrink: 0;
 }

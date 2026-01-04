@@ -2,14 +2,14 @@
 * This is the main JavaScript used by Vite to build the app.js file.
 */
 
-// Import Glide.js for sliders
-import Glide from '@glidejs/glide';
-import '@glidejs/glide/dist/css/glide.core.min.css';
-import '@glidejs/glide/dist/css/glide.theme.min.css';
+// Import Swiper.js for sliders
+import Swiper from 'swiper';
+import { Autoplay } from 'swiper/modules';
+// CSS is imported in app.css
 
 // Import GLightbox for lightbox functionality
 import GLightbox from 'glightbox';
-import 'glightbox/dist/css/glightbox.css';
+// CSS is imported in app.css
 
 // Initialize Hero Slider (Vanilla JS)
 document.addEventListener('DOMContentLoaded', function() {
@@ -42,31 +42,34 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(nextSlide, 5000);
     }
 
-    // Sponsors slider
+    // Sponsors slider with Swiper
     const sponsorsSlider = document.querySelector('.sponsors-slider');
     if (sponsorsSlider) {
-        // Ensure the slider container is visible
-        sponsorsSlider.style.display = 'block';
-        const glide = new Glide('.sponsors-slider', {
-            type: 'carousel',
-            autoplay: 3000,
-            perView: 3,
-            gap: 40,
+        new Swiper('.sponsors-slider', {
+            modules: [Autoplay],
+            slidesPerView: 3,
+            spaceBetween: 40,
+            loop: true,
+            centeredSlides: false,
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+            },
             breakpoints: {
                 1024: {
-                    perView: 2
+                    slidesPerView: 3,
+                    spaceBetween: 40,
                 },
                 768: {
-                    perView: 1
-                }
+                    slidesPerView: 2,
+                    spaceBetween: 30,
+                },
+                640: {
+                    slidesPerView: 1,
+                    spaceBetween: 20,
+                },
             },
-            startAt: 0,
         });
-        glide.mount();
-        // Force update after mount
-        setTimeout(() => {
-            glide.update();
-        }, 100);
     }
 });
 
