@@ -28,6 +28,39 @@
 {{-- App Meta Tags --}}
 @include('hyde::layouts.meta')
 
+{{-- Open Graph / Twitter Card Meta Tags --}}
+@php
+    // Collect context variables for OG meta tags
+    $ogContext = [
+        'year' => $year ?? null,
+        'gameName' => $gameName ?? null,
+        'description' => $description ?? null,
+        'headerImage' => $headerImage ?? null,
+        'personName' => $personName ?? null,
+        'totalGames' => $totalGames ?? 0,
+        'years' => $years ?? [],
+        'persons' => $persons ?? null,
+        'jam' => $jam ?? null,
+        'games' => $games ?? null,
+    ];
+    
+    $ogMeta = (new \App\Helpers\OpenGraphMeta())->getMetaTags($ogContext);
+@endphp
+
+{{-- Open Graph Tags --}}
+<meta property="og:type" content="{{ $ogMeta['type'] }}">
+<meta property="og:title" content="{{ $ogMeta['title'] }}">
+<meta property="og:description" content="{{ $ogMeta['description'] }}">
+<meta property="og:image" content="{{ $ogMeta['image'] }}">
+<meta property="og:url" content="{{ $ogMeta['url'] }}">
+<meta property="og:site_name" content="{{ $ogMeta['site_name'] ?? 'Hagenberg Game Jam' }}">
+
+{{-- Twitter Card Tags --}}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $ogMeta['title'] }}">
+<meta name="twitter:description" content="{{ $ogMeta['description'] }}">
+<meta name="twitter:image" content="{{ $ogMeta['image'] }}">
+
 {{-- App Stylesheets --}}
 @if(view()->exists('layouts.styles'))
     @include('layouts.styles')
