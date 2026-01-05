@@ -1,0 +1,18 @@
+parameters:
+    paths:
+        - app
+        - config
+
+    # Rule level: 0 is the loosest and 9 is the strictest
+    level: 9
+
+    # Memory limit for PHPStan
+    tmpDir: .phpstan
+
+    excludePaths:
+        - vendor
+        - _site
+        - node_modules
+        - storage (?)
+        - bootstrap (?)
+        - app/storage
