@@ -19,7 +19,11 @@ use function unlink;
  * This is more thorough than HydePHP's default CleanSiteDirectory task which
  * only removes HTML and JSON files.
  */
-class CleanSiteDirectoryBuildTask extends PreBuildTask
+/**
+ * IMPORTANT: This class name starts with "A" to ensure it runs before
+ * TransferMediaAssets (which starts with "T") when tasks are auto-discovered.
+ */
+class ACleanSiteDirectoryBuildTask extends PreBuildTask
 {
     protected static string $message = 'Completely emptying build directory';
 
