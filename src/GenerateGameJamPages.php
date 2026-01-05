@@ -18,7 +18,11 @@ class GenerateGameJamPages
 
     protected static function generatePage(int $year): void
     {
-        $template = file_get_contents(base_path('_pages/2024.blade.php'));
+        $templatePath = base_path('_pages/2024.blade.php');
+        $template = file_get_contents($templatePath);
+        if ($template === false) {
+            return;
+        }
         $template = str_replace('$year = 2024;', "\$year = {$year};", $template);
 
         $filePath = base_path("_pages/{$year}.blade.php");

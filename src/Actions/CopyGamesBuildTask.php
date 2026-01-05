@@ -84,7 +84,7 @@ class CopyGamesBuildTask extends PostBuildTask
                 $year = (int) $matches[1];
                 $games = GameJamData::getGames($year);
 
-                if (!is_array($games)) {
+                if ($games === []) {
                     continue;
                 }
 
@@ -93,7 +93,7 @@ class CopyGamesBuildTask extends PostBuildTask
                         continue;
                     }
 
-                    $downloads = $entry['download'] ?? [];
+                    $downloads = $entry['download'];
                     if (!is_array($downloads)) {
                         continue;
                     }
@@ -103,7 +103,7 @@ class CopyGamesBuildTask extends PostBuildTask
                             continue;
                         }
 
-                        $fileName = $download['file'] ?? '';
+                        $fileName = $download['file'];
                         if (!is_string($fileName) || $fileName === '') {
                             continue;
                         }

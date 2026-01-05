@@ -108,24 +108,24 @@ class UpdateGameChecksumsCommand extends Command
         $updated = 0;
         $gamesDir = base_path("games/{$year}");
 
+        $hasChanges = false;
+
         foreach ($data as $index => $entry) {
             if (!is_array($entry) || !isset($entry['game']) || !isset($entry['download'])) {
                 continue;
             }
 
-            $downloads = $entry['download'] ?? [];
+            $downloads = $entry['download'];
             if (!is_array($downloads)) {
                 continue;
             }
-
-            $hasChanges = false;
 
             foreach ($downloads as $downloadIndex => $download) {
                 if (!is_array($download) || !isset($download['file'])) {
                     continue;
                 }
 
-                $fileName = $download['file'] ?? '';
+                $fileName = $download['file'];
                 if (!is_string($fileName) || $fileName === '') {
                     continue;
                 }
@@ -150,6 +150,9 @@ class UpdateGameChecksumsCommand extends Command
 
                 // Update checksum if it's missing or different
                 if (!isset($download['checksum']) || $download['checksum'] !== $checksum) {
+                    if (!is_array($data[$index]) || !is_array($data[$index]['download'] ?? null)) {
+                        continue;
+                    }
                     $data[$index]['download'][$downloadIndex]['checksum'] = $checksum;
                     $hasChanges = true;
                     $updated++;

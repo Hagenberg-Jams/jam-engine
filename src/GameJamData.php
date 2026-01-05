@@ -7,10 +7,13 @@ namespace App;
  */
 class GameJamData
 {
+    /** @var array<string, array<string, mixed>> */
     protected static array $cache = [];
 
     /**
      * Load homepage data (about/video/sponsors).
+     *
+     * @return array<string, mixed>
      */
     public static function getHomepage(): array
     {
@@ -33,6 +36,8 @@ class GameJamData
 
     /**
      * Load games data for a specific year
+     *
+     * @return array<int, array<string, mixed>>
      */
     public static function getGames(int $year): array
     {
@@ -50,13 +55,16 @@ class GameJamData
 
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
 
-        self::$cache[$key] = $data ?? [];
+        $games = is_array($data) ? $data : [];
+        self::$cache[$key] = $games;
 
-        return self::$cache[$key];
+        return $games;
     }
 
     /**
      * Load jam data for a specific year
+     *
+     * @return array<string, mixed>|null
      */
     public static function getJam(int $year): ?array
     {
@@ -73,6 +81,8 @@ class GameJamData
 
     /**
      * Get all available jam years
+     *
+     * @return array<int>
      */
     public static function getAvailableYears(): array
     {
@@ -94,6 +104,8 @@ class GameJamData
 
     /**
      * Get rules data
+     *
+     * @return array<string, mixed>
      */
     public static function getRules(): array
     {
@@ -103,7 +115,9 @@ class GameJamData
             return [];
         }
 
-        return \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
+        $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
+
+        return is_array($data) ? $data : [];
     }
 
     /**

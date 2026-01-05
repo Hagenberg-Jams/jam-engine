@@ -11,7 +11,7 @@ class OpenGraphMeta
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('gamejam.website', 'https://hagenberg-gamejam.at'), '/');
+        $this->baseUrl = rtrim((string) config('gamejam.website', 'https://hagenberg-gamejam.at'), '/');
         $this->siteName = 'Hagenberg Game Jam';
     }
 
@@ -52,6 +52,9 @@ class OpenGraphMeta
         return $this->getHomepageMeta();
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function getHomepageMeta(): array
     {
         $homepage = GameJamData::getHomepage();
@@ -72,6 +75,11 @@ class OpenGraphMeta
         ];
     }
 
+    /**
+     * @param array<string, mixed>|null $jam
+     * @param array<int, array<string, mixed>>|null $games
+     * @return array<string, string>
+     */
     protected function getYearMeta(?int $year = null, ?array $jam = null, ?array $games = null): array
     {
         if (!$year) {
@@ -86,17 +94,22 @@ class OpenGraphMeta
         }
 
         $title = "Hagenberg Game Jam {$year}";
-        $description = $jam['topic'] ?? "Games from the {$year} Hagenberg Game Jam";
-        if ($jam && isset($jam['topic'])) {
+        $description = (is_array($jam) && isset($jam['topic']) && is_string($jam['topic'])) 
+            ? $jam['topic'] 
+            : "Games from the {$year} Hagenberg Game Jam";
+        if ($jam && isset($jam['topic']) && is_string($jam['topic'])) {
             $description = "{$year} Hagenberg Game Jam: {$jam['topic']}";
         }
 
         // Find header image: first winner game, or first game
         $image = null;
         foreach ($games as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
             if (isset($entry['winner']) && $entry['winner'] !== 'no' && $entry['winner'] !== '') {
                 $headerImage = $entry['headerimage'] ?? '';
-                if ($headerImage) {
+                if (is_string($headerImage) && $headerImage !== '') {
                     $image = $this->getImageUrl($headerImage, $year);
                     break;
                 }
@@ -106,9 +119,11 @@ class OpenGraphMeta
         // If no winner image found, use first game's header image
         if (!$image && !empty($games)) {
             $firstEntry = $games[0];
-            $headerImage = $firstEntry['headerimage'] ?? '';
-            if ($headerImage) {
-                $image = $this->getImageUrl($headerImage, $year);
+            if (is_array($firstEntry)) {
+                $headerImage = $firstEntry['headerimage'] ?? '';
+                if (is_string($headerImage) && $headerImage !== '') {
+                    $image = $this->getImageUrl($headerImage, $year);
+                }
             }
         }
 
@@ -126,6 +141,9 @@ class OpenGraphMeta
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function getGameMeta(?int $year, ?string $gameName, ?string $description, ?string $headerImage): array
     {
         if (!$year || !$gameName) {
@@ -136,7 +154,7 @@ class OpenGraphMeta
 
         // Truncate description to ~200 characters
         $plainDescription = strip_tags($description ?? '');
-        $plainDescription = preg_replace('/\s+/', ' ', $plainDescription); // Normalize whitespace
+        $plainDescription = preg_replace('/\s+/', ' ', $plainDescription) ?? ''; // Normalize whitespace
         $plainDescription = trim($plainDescription);
 
         $shortDescription = mb_substr($plainDescription, 0, 200);
@@ -156,6 +174,9 @@ class OpenGraphMeta
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function getPeopleMeta(): array
     {
         return [
@@ -168,6 +189,10 @@ class OpenGraphMeta
         ];
     }
 
+    /**
+     * @param array<int> $years
+     * @return array<string, string>
+     */
     protected function getPersonMeta(?string $personName, int $totalGames, array $years): array
     {
         if (!$personName) {
@@ -187,6 +212,9 @@ class OpenGraphMeta
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function getDefaultMeta(): array
     {
         $homepage = GameJamData::getHomepage();

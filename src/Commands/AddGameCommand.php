@@ -48,6 +48,7 @@ class AddGameCommand extends Command
     protected string $inputDownloadDir;
     protected ?int $year = null;
     protected string $gameSlug = '';
+    /** @var array<string> */
     protected array $processedFiles = [];
 
     public function handle(): int
@@ -183,6 +184,9 @@ class AddGameCommand extends Command
         return true;
     }
 
+    /**
+     * @return array<string>
+     */
     protected function getImageFiles(string $dir): array
     {
         if (!is_dir($dir)) {
@@ -196,20 +200,25 @@ class AddGameCommand extends Command
         return $files;
     }
 
+    /**
+     * @return array{name: string, players: string, controls: array<string>, description: string, teamName: string, teamMembers: array<string>, winner: string}|null
+     */
     protected function collectGameData(): ?array
     {
-        $name = $this->ask('Game name');
+        $nameInput = $this->ask('Game name');
+        $name = is_string($nameInput) ? $nameInput : '';
         if (empty($name)) {
             $this->error('Game name is required');
             return null;
         }
 
         $playersInput = $this->ask('Number of players (e.g., "1", "2-4", "3-8")', '1');
-        $players = $this->parsePlayersInput($playersInput);
+        $players = $this->parsePlayersInput(is_string($playersInput) ? $playersInput : '1');
 
         $controls = $this->askForControls();
         $description = $this->askForDescription();
-        $teamName = $this->ask('Team name');
+        $teamNameInput = $this->ask('Team name');
+        $teamName = is_string($teamNameInput) ? $teamNameInput : '';
         $teamMembers = $this->askForTeamMembers();
         $winner = $this->askForWinner();
 
@@ -224,6 +233,9 @@ class AddGameCommand extends Command
         ];
     }
 
+    /**
+     * @return array<string>
+     */
     protected function askForControls(): array
     {
         $options = ['keyboard', 'mouse', 'gamepad', 'touch'];
@@ -233,7 +245,8 @@ class AddGameCommand extends Command
         }
 
         $input = $this->ask('Enter numbers separated by commas (e.g., 1,2)', '1');
-        $selectedNumbers = array_map('trim', explode(',', $input));
+        $inputString = is_string($input) ? $input : '1';
+        $selectedNumbers = array_map('trim', explode(',', $inputString));
         $selected = [];
 
         foreach ($selectedNumbers as $num) {
@@ -263,6 +276,9 @@ class AddGameCommand extends Command
         return implode("\n", $lines);
     }
 
+    /**
+     * @return array<string>
+     */
     protected function askForTeamMembers(): array
     {
         $this->info('Enter team members (comma-separated, semicolon-separated, markdown list format, or one per line). Type "---END---" when finished:');
@@ -272,6 +288,9 @@ class AddGameCommand extends Command
         $input = '';
         while (true) {
             $line = $this->ask('', '');
+            if (!is_string($line)) {
+                continue;
+            }
             if ($line === '---END---') {
                 break;
             }
@@ -344,11 +363,11 @@ class AddGameCommand extends Command
         }
 
         // Clean up: remove empty entries, normalize whitespace, remove markdown list prefixes
-        $members = array_filter(array_map(function ($m) {
+        $members = array_filter(array_map(function (string $m): string {
             $m = trim($m);
             // Remove markdown list prefixes: "- ", "* ", "+ " (for unordered lists)
-            $m = preg_replace('/^[-*+]\s+/', '', $m);
-            return preg_replace('/\s+/', ' ', $m);
+            $m = preg_replace('/^[-*+]\s+/', '', $m) ?? $m;
+            return preg_replace('/\s+/', ' ', $m) ?? $m;
         }, $members));
 
         return array_values($members);
@@ -363,13 +382,16 @@ class AddGameCommand extends Command
         }
 
         $placement = $this->ask('Placement (e.g., "1st", "2nd", "3rd", or leave empty for just "yes")', '');
-        if (empty($placement)) {
+        if (empty($placement) || !is_string($placement)) {
             return 'yes';
         }
 
         return $placement;
     }
 
+    /**
+     * @param array<string, mixed> $gameData
+     */
     protected function processImages(array &$gameData): bool
     {
         $this->info('Processing images...');
@@ -578,6 +600,9 @@ class AddGameCommand extends Command
         return true;
     }
 
+    /**
+     * @param array<string, mixed> $gameData
+     */
     protected function processDownloads(array &$gameData): void
     {
         if (!is_dir($this->inputDownloadDir)) {
@@ -618,7 +643,8 @@ class AddGameCommand extends Command
             }
 
             $selected = $this->ask('Platform (1-4)', '1');
-            $platform = $platformOptions[$selected] ?? $platformOptions['1'];
+            $selectedKey = is_string($selected) ? $selected : '1';
+            $platform = $platformOptions[$selectedKey] ?? $platformOptions['1'];
 
             // Generate new filename: {slug}-{Platform}.zip
             $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
@@ -674,7 +700,10 @@ class AddGameCommand extends Command
         }
 
         foreach ($data as $entry) {
-            if (isset($entry['game']['name']) && $entry['game']['name'] === $gameName) {
+            if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+                continue;
+            }
+            if (isset($entry['game']['name']) && is_string($entry['game']['name']) && $entry['game']['name'] === $gameName) {
                 return true;
             }
         }
@@ -691,14 +720,23 @@ class AddGameCommand extends Command
             return;
         }
 
-        $data = array_filter($data, function ($entry) use ($gameName) {
-            return !isset($entry['game']['name']) || $entry['game']['name'] !== $gameName;
+        $data = array_filter($data, function (mixed $entry) use ($gameName): bool {
+            if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+                return true;
+            }
+            if (!isset($entry['game']['name']) || !is_string($entry['game']['name'])) {
+                return true;
+            }
+            return $entry['game']['name'] !== $gameName;
         });
 
         $yamlContent = Yaml::dump(array_values($data), 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
         file_put_contents($yamlFile, $yamlContent);
     }
 
+    /**
+     * @param array<string, mixed> $gameData
+     */
     protected function addToYaml(array $gameData): bool
     {
         $yamlFile = base_path("_data/games/games{$this->year}.yaml");

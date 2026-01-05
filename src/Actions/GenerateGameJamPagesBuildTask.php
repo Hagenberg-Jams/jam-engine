@@ -66,7 +66,7 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
         sort($years);
 
-        return array_values($years);
+        return $years;
     }
 
     protected function registerYearPage(int $year): void
@@ -84,13 +84,21 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
     protected function registerGamePages(int $year): void
     {
         $games = GameJamData::getGames($year);
-        if (!is_array($games) || $games === []) {
+        if ($games === []) {
             return;
         }
 
         foreach ($games as $entry) {
-            $game = $entry['game'] ?? [];
-            $name = is_array($game) ? ($game['name'] ?? null) : null;
+            if (!is_array($entry) || !isset($entry['game'])) {
+                continue;
+            }
+
+            $game = $entry['game'];
+            if (!is_array($game) || !isset($game['name'])) {
+                continue;
+            }
+
+            $name = $game['name'];
             if (!is_string($name) || $name === '') {
                 continue;
             }
@@ -127,13 +135,21 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
         // Collect all persons from all games
         foreach ($years as $year) {
             $games = GameJamData::getGames($year);
-            if (!is_array($games) || $games === []) {
+            if ($games === []) {
                 continue;
             }
 
             foreach ($games as $entry) {
-                $team = $entry['team'] ?? [];
-                $members = is_array($team) ? ($team['members'] ?? []) : [];
+                if (!is_array($entry) || !isset($entry['team'])) {
+                    continue;
+                }
+
+                $team = $entry['team'];
+                if (!is_array($team) || !isset($team['members'])) {
+                    continue;
+                }
+
+                $members = $team['members'];
 
                 if (!is_array($members)) {
                     continue;
@@ -176,7 +192,7 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
         // Register the people overview page
         $page = InMemoryPage::make('people', [
-            'persons' => array_values($persons),
+            'persons' => $persons,
         ], '', 'pages.people');
 
         Hyde::pages()->addPage($page);
@@ -196,16 +212,24 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
         // Collect all persons from all games
         foreach ($years as $year) {
             $games = GameJamData::getGames($year);
-            if (!is_array($games) || $games === []) {
+            if ($games === []) {
                 continue;
             }
 
             foreach ($games as $entry) {
-                $game = $entry['game'] ?? [];
-                $team = $entry['team'] ?? [];
-                $gameName = is_array($game) ? ($game['name'] ?? '') : '';
-                $teamName = is_array($team) ? ($team['name'] ?? '') : '';
-                $members = is_array($team) ? ($team['members'] ?? []) : [];
+                if (!is_array($entry) || !isset($entry['game']) || !isset($entry['team'])) {
+                    continue;
+                }
+
+                $game = $entry['game'];
+                $team = $entry['team'];
+                if (!is_array($game) || !isset($game['name']) || !is_array($team)) {
+                    continue;
+                }
+
+                $gameName = $game['name'];
+                $teamName = is_array($team) && isset($team['name']) ? $team['name'] : '';
+                $members = is_array($team) && isset($team['members']) ? $team['members'] : [];
 
                 if (!is_string($gameName) || $gameName === '' || !is_array($members)) {
                     continue;
@@ -240,6 +264,10 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
         // Register a page for each person
         foreach ($persons as $personName => $games) {
+            if (!is_string($personName)) {
+                continue;
+            }
+
             $slug = Str::slug($personName);
             if ($slug === '') {
                 continue;

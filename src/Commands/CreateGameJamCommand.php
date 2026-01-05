@@ -48,11 +48,14 @@ class CreateGameJamCommand extends Command
         }
 
         // Get all required data
-        $title = $this->ask("Title (default: '{$year}')", (string) $year);
-        $topic = $this->ask('Topic/Theme of the Game Jam');
+        $titleInput = $this->ask("Title (default: '{$year}')", (string) $year);
+        $title = is_string($titleInput) ? $titleInput : (string) $year;
+        $topicInput = $this->ask('Topic/Theme of the Game Jam');
+        $topic = is_string($topicInput) ? $topicInput : '';
         $startDate = $this->askForDate('Start date', 'YYYY-MM-DD');
         $endDate = $this->askForDate('End date', 'YYYY-MM-DD');
-        $hours = (int) $this->ask('Duration in hours (e.g., 36, 48)', '36');
+        $hoursInput = $this->ask('Duration in hours (e.g., 36, 48)', '36');
+        $hours = is_numeric($hoursInput) ? (int) $hoursInput : 36;
 
         // Create jam YAML file
         $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours);
@@ -115,6 +118,10 @@ class CreateGameJamCommand extends Command
     {
         while (true) {
             $input = $this->ask("{$label} ({$format})");
+            if (!is_string($input)) {
+                $this->error("Date must be in format {$format}");
+                continue;
+            }
 
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $input) !== 1) {
                 $this->error("Date must be in format {$format}");

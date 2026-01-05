@@ -41,7 +41,9 @@ class ConvertImagesCommand extends Command
 
     protected $description = 'Convert all pixel images to a target format and update references';
 
+    /** @var array<string> */
     protected array $convertedFiles = [];
+    /** @var array<string> */
     protected array $updatedYamlFiles = [];
     protected int $skippedCount = 0;
     protected int $convertedCount = 0;
@@ -49,9 +51,11 @@ class ConvertImagesCommand extends Command
 
     public function handle(): int
     {
-        $targetFormat = strtolower($this->option('format') ?? 'webp');
+        $formatOption = $this->option('format');
+        $targetFormat = strtolower(is_string($formatOption) ? $formatOption : 'webp');
         $yearFilter = $this->option('year');
-        $dryRun = $this->option('dry-run');
+        $dryRunOption = $this->option('dry-run');
+        $dryRun = is_bool($dryRunOption) ? $dryRunOption : false;
 
         // Check ImageMagick
         exec('magick -version', $output, $returnCode);
@@ -76,7 +80,7 @@ class ConvertImagesCommand extends Command
         $this->info(str_repeat("=", 80));
 
         // STEP 1: Process all games YAML files (years)
-        $yamlFiles = glob('_data/games/games*.yaml');
+        $yamlFiles = glob('_data/games/games*.yaml') ?: [];
 
         foreach ($yamlFiles as $yamlFile) {
             // Extract year from filename
@@ -103,10 +107,13 @@ class ConvertImagesCommand extends Command
             $modified = false;
 
             foreach ($data as $index => $entry) {
-                $gameName = $entry['game']['name'] ?? 'Unknown';
+                if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+                    continue;
+                }
+                $gameName = is_string($entry['game']['name'] ?? null) ? $entry['game']['name'] : 'Unknown';
 
                 // Process headerimage
-                if (isset($entry['headerimage'])) {
+                if (isset($entry['headerimage']) && is_string($entry['headerimage'])) {
                     $oldHeader = $entry['headerimage'];
                     $newHeader = $this->convertImageFile($year, $oldHeader, $targetFormat, $dryRun);
 
@@ -127,7 +134,10 @@ class ConvertImagesCommand extends Command
                     $thumbCount = 0;
 
                     foreach ($entry['images'] as $imgIndex => $image) {
-                        if (isset($image['file'])) {
+                        if (!is_array($image)) {
+                            continue;
+                        }
+                        if (isset($image['file']) && is_string($image['file'])) {
                             $oldFile = $image['file'];
                             $newFile = $this->convertImageFile($year, $oldFile, $targetFormat, $dryRun);
 
@@ -138,7 +148,7 @@ class ConvertImagesCommand extends Command
                             }
                         }
 
-                        if (isset($image['thumb'])) {
+                        if (isset($image['thumb']) && is_string($image['thumb'])) {
                             $oldThumb = $image['thumb'];
                             $newThumb = $this->convertImageFile($year, $oldThumb, $targetFormat, $dryRun);
 
@@ -159,7 +169,7 @@ class ConvertImagesCommand extends Command
                         if ($thumbCount > 0) {
                             $summary[] = "{$thumbCount} thumbnail(s)";
                         }
-                        if (!empty($summary)) {
+                        if (count($summary) > 0) {
                             if ($dryRun) {
                                 $this->line("  [DRY RUN] {$gameName}: " . implode(', ', $summary) . " would be converted");
                             } else {
@@ -193,7 +203,7 @@ class ConvertImagesCommand extends Command
         $this->info("\nProcessing root _media directory...");
         // Only process known image file extensions
         $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
-        $rootFiles = glob('_media/*');
+        $rootFiles = glob('_media/*') ?: [];
         foreach ($rootFiles as $file) {
             if (is_dir($file)) {
                 continue;
@@ -413,6 +423,9 @@ class ConvertImagesCommand extends Command
         // Update hero images
         if (isset($data['hero']['images']) && is_array($data['hero']['images'])) {
             foreach ($data['hero']['images'] as $index => $imageFile) {
+                if (!is_string($imageFile)) {
+                    continue;
+                }
                 $newFile = $this->convertImageFile(null, $imageFile, $targetFormat, $dryRun, '_media');
                 if ($newFile && $newFile !== $imageFile) {
                     $data['hero']['images'][$index] = $newFile;
@@ -422,7 +435,7 @@ class ConvertImagesCommand extends Command
         }
 
         // Update about image
-        if (isset($data['about']['image'])) {
+        if (isset($data['about']['image']) && is_string($data['about']['image'])) {
             $oldImage = $data['about']['image'];
             $newImage = $this->convertImageFile(null, $oldImage, $targetFormat, $dryRun, '_media');
             if ($newImage && $newImage !== $oldImage) {
@@ -434,20 +447,21 @@ class ConvertImagesCommand extends Command
         // Update sponsor logos (only pixel images, skip SVG)
         if (isset($data['sponsors']['items']) && is_array($data['sponsors']['items'])) {
             foreach ($data['sponsors']['items'] as $index => $sponsor) {
-                if (isset($sponsor['logo'])) {
-                    $oldLogo = $sponsor['logo'];
-                    $ext = strtolower(pathinfo($oldLogo, PATHINFO_EXTENSION));
+                if (!is_array($sponsor) || !isset($sponsor['logo']) || !is_string($sponsor['logo'])) {
+                    continue;
+                }
+                $oldLogo = $sponsor['logo'];
+                $ext = strtolower(pathinfo($oldLogo, PATHINFO_EXTENSION));
 
                     // Skip SVG files
                     if ($ext === 'svg') {
                         continue;
                     }
 
-                    $newLogo = $this->convertImageFile(null, $oldLogo, $targetFormat, $dryRun, '_media');
-                    if ($newLogo && $newLogo !== $oldLogo) {
-                        $data['sponsors']['items'][$index]['logo'] = $newLogo;
-                        $modified = true;
-                    }
+                $newLogo = $this->convertImageFile(null, $oldLogo, $targetFormat, $dryRun, '_media');
+                if ($newLogo && $newLogo !== $oldLogo) {
+                    $data['sponsors']['items'][$index]['logo'] = $newLogo;
+                    $modified = true;
                 }
             }
         }
@@ -466,10 +480,9 @@ class ConvertImagesCommand extends Command
     protected function processAllYamlFiles(string $targetFormat, bool $dryRun): void
     {
         // Find all YAML files in _data/ directory (excluding games subdirectory which is already processed)
-        $yamlFiles = array_merge(
-            glob('_data/*.yaml'),
-            glob('_data/*.yml'),
-        );
+        $yamlFiles1 = glob('_data/*.yaml') ?: [];
+        $yamlFiles2 = glob('_data/*.yml') ?: [];
+        $yamlFiles = array_merge($yamlFiles1, $yamlFiles2);
 
         foreach ($yamlFiles as $yamlFile) {
             // Skip games files (already processed)
@@ -506,6 +519,10 @@ class ConvertImagesCommand extends Command
         }
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     protected function processYamlData(array $data, string $targetFormat, bool $dryRun, string $yamlFile, bool &$modified): array
     {
         foreach ($data as $key => $value) {
@@ -532,10 +549,9 @@ class ConvertImagesCommand extends Command
 
     protected function processBladeTemplates(string $targetFormat, bool $dryRun): void
     {
-        $bladeFiles = array_merge(
-            glob('_pages/**/*.blade.php'),
-            glob('resources/views/**/*.blade.php'),
-        );
+        $bladeFiles1 = glob('_pages/**/*.blade.php') ?: [];
+        $bladeFiles2 = glob('resources/views/**/*.blade.php') ?: [];
+        $bladeFiles = array_merge($bladeFiles1, $bladeFiles2);
 
         $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
 
@@ -550,6 +566,9 @@ class ConvertImagesCommand extends Command
 
         foreach ($bladeFiles as $bladeFile) {
             $content = file_get_contents($bladeFile);
+            if ($content === false) {
+                continue;
+            }
             $originalContent = $content;
             $modified = false;
 
@@ -561,10 +580,13 @@ class ConvertImagesCommand extends Command
             preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
 
             foreach ($matches as $match) {
-                $quote1 = $match[1] ?? '';
-                $mediaPath = $match[2] ?? '';
-                $imageFile = $match[3] ?? '';
-                $quote2 = $match[4] ?? '';
+                if (!is_array($match) || count($match) < 4) {
+                    continue;
+                }
+                $quote1 = is_string($match[1] ?? null) ? $match[1] : '';
+                $mediaPath = is_string($match[2] ?? null) ? $match[2] : '';
+                $imageFile = is_string($match[3] ?? null) ? $match[3] : '';
+                $quote2 = is_string($match[4] ?? null) ? $match[4] : '';
 
                 if (empty($imageFile)) {
                     continue;
@@ -587,7 +609,7 @@ class ConvertImagesCommand extends Command
                 $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
 
                 // Build the original match string for replacement
-                $originalMatch = $match[0];
+                $originalMatch = is_string($match[0] ?? null) ? $match[0] : '';
 
                 if (file_exists("_media/{$imageFile}")) {
                     $newFile = $this->convertImageFile(null, $imageFile, $targetFormat, $dryRun, '_media');
