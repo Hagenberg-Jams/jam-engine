@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
-use Illuminate\Console\Command;
-use Symfony\Component\Yaml\Yaml;
-
-use function glob;
 use function file_exists;
+use function file_put_contents;
+use function glob;
 use function hash_file;
+
+use Illuminate\Console\Command;
+
 use function is_array;
 use function is_string;
 use function preg_match;
-use function file_put_contents;
+
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Command to calculate and update SHA256 checksums for game download files in YAML data files.
@@ -164,4 +166,3 @@ class UpdateGameChecksumsCommand extends Command
         return $updated;
     }
 }
-

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use Hyde\Hyde;
 use Hyde\Framework\Features\BuildTasks\PostBuildTask;
+use Hyde\Hyde;
 
 /**
  * Post-build task to copy robots.txt to the output directory.

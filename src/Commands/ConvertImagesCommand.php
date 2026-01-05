@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
-use Illuminate\Console\Command;
-use Symfony\Component\Yaml\Yaml;
-
+use function exec;
 use function file_exists;
 use function file_put_contents;
-use function is_dir;
 use function glob;
+
+use Illuminate\Console\Command;
+
 use function is_array;
-use function exec;
+use function is_dir;
 use function pathinfo;
 use function str_replace;
-use function preg_replace;
+
+use Symfony\Component\Yaml\Yaml;
+
 use function unlink;
 
 /**
@@ -75,12 +77,12 @@ class ConvertImagesCommand extends Command
 
         // STEP 1: Process all games YAML files (years)
         $yamlFiles = glob('_data/games/games*.yaml');
-        
+
         foreach ($yamlFiles as $yamlFile) {
             // Extract year from filename
             preg_match('/games(\d{4})\.yaml/', $yamlFile, $matches);
             $year = $matches[1] ?? null;
-            
+
             if (!$year) {
                 continue;
             }
@@ -91,9 +93,9 @@ class ConvertImagesCommand extends Command
             }
 
             $this->info("\nProcessing year {$year}...");
-            
+
             $data = Yaml::parseFile($yamlFile) ?? [];
-            
+
             if (!is_array($data)) {
                 continue;
             }
@@ -102,12 +104,12 @@ class ConvertImagesCommand extends Command
 
             foreach ($data as $index => $entry) {
                 $gameName = $entry['game']['name'] ?? 'Unknown';
-                
+
                 // Process headerimage
                 if (isset($entry['headerimage'])) {
                     $oldHeader = $entry['headerimage'];
                     $newHeader = $this->convertImageFile($year, $oldHeader, $targetFormat, $dryRun);
-                    
+
                     if ($newHeader && $newHeader !== $oldHeader) {
                         $data[$index]['headerimage'] = $newHeader;
                         $modified = true;
@@ -123,12 +125,12 @@ class ConvertImagesCommand extends Command
                 if (isset($entry['images']) && is_array($entry['images'])) {
                     $imageCount = 0;
                     $thumbCount = 0;
-                    
+
                     foreach ($entry['images'] as $imgIndex => $image) {
                         if (isset($image['file'])) {
                             $oldFile = $image['file'];
                             $newFile = $this->convertImageFile($year, $oldFile, $targetFormat, $dryRun);
-                            
+
                             if ($newFile && $newFile !== $oldFile) {
                                 $data[$index]['images'][$imgIndex]['file'] = $newFile;
                                 $modified = true;
@@ -139,7 +141,7 @@ class ConvertImagesCommand extends Command
                         if (isset($image['thumb'])) {
                             $oldThumb = $image['thumb'];
                             $newThumb = $this->convertImageFile($year, $oldThumb, $targetFormat, $dryRun);
-                            
+
                             if ($newThumb && $newThumb !== $oldThumb) {
                                 $data[$index]['images'][$imgIndex]['thumb'] = $newThumb;
                                 $modified = true;
@@ -147,7 +149,7 @@ class ConvertImagesCommand extends Command
                             }
                         }
                     }
-                    
+
                     // Show summary for images/thumbs if any were converted
                     if ($imageCount > 0 || $thumbCount > 0) {
                         $summary = [];
@@ -196,20 +198,20 @@ class ConvertImagesCommand extends Command
             if (is_dir($file)) {
                 continue;
             }
-            
+
             $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
             // Only process known image formats, skip SVG, ICO, CSS, JS, manifest, etc.
             if (empty($ext) || !in_array($ext, $imageExtensions)) {
                 continue;
             }
-            
+
             $filename = basename($file);
             // Skip favicons, app icons, and 404 images (they should stay PNG for compatibility or are not used)
             $filenameLower = strtolower($filename);
             $skipPatterns = [
-                'favicon-16x16', 'favicon-32x32', 'apple-touch-icon', 
+                'favicon-16x16', 'favicon-32x32', 'apple-touch-icon',
                 'android-chrome-192x192', 'android-chrome-512x512',
-                '404.png', '404_text.png'
+                '404.png', '404_text.png',
             ];
             $skipFile = false;
             foreach ($skipPatterns as $pattern) {
@@ -218,7 +220,7 @@ class ConvertImagesCommand extends Command
                     break;
                 }
             }
-            
+
             if (!$skipFile) {
                 $this->convertImageFile(null, $filename, $targetFormat, $dryRun, '_media');
             }
@@ -241,7 +243,7 @@ class ConvertImagesCommand extends Command
     {
         // Get list of supported formats from ImageMagick
         exec('magick -list format', $output, $returnCode);
-        
+
         if ($returnCode !== 0) {
             // Fallback: assume common formats are supported
             $commonFormats = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'avif', 'heic', 'heif', 'jxl'];
@@ -253,13 +255,13 @@ class ConvertImagesCommand extends Command
         // We need to match the format name in the first column (may have * suffix)
         $formatUpper = strtoupper($format);
         $formatPattern = '/^\s*' . preg_quote($formatUpper, '/') . '\*?\s+/i';
-        
+
         foreach ($output as $line) {
             // Skip header lines
             if (preg_match('/^Format\s+Module/i', $line) || preg_match('/^-+$/', $line)) {
                 continue;
             }
-            
+
             // Check if line starts with the format name (with optional * and spaces)
             if (preg_match($formatPattern, $line)) {
                 return true;
@@ -286,9 +288,9 @@ class ConvertImagesCommand extends Command
         // Skip favicons, app icons, and 404 images (they should stay PNG for compatibility or are not used)
         $filenameLower = strtolower($filename);
         $skipPatterns = [
-            'favicon-16x16', 'favicon-32x32', 'apple-touch-icon', 
+            'favicon-16x16', 'favicon-32x32', 'apple-touch-icon',
             'android-chrome-192x192', 'android-chrome-512x512',
-            '404.png', '404_text.png'
+            '404.png', '404_text.png',
         ];
         foreach ($skipPatterns as $pattern) {
             if (str_contains($filenameLower, $pattern)) {
@@ -314,18 +316,18 @@ class ConvertImagesCommand extends Command
         }
 
         $oldPath = "{$mediaDir}/{$filename}";
-        
+
         // Check if file already exists in target format (may have been converted previously)
         $pathInfo = pathinfo($filename);
         $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
         $targetPath = "{$mediaDir}/{$targetFile}";
-        
+
         // If target file already exists, return it (file was already converted)
         if (file_exists($targetPath) && $targetPath !== $oldPath) {
             $this->skippedCount++;
             return $targetFile;
         }
-        
+
         if (!file_exists($oldPath)) {
             $this->warn("  ⚠ File not found: {$oldPath}");
             $this->errorCount++;
@@ -352,12 +354,12 @@ class ConvertImagesCommand extends Command
         // Convert with ImageMagick
         $cmd = 'magick';
         $cmd .= ' "' . str_replace('"', '\\"', $oldPath) . '"';
-        
+
         // Set quality for lossy formats
         if ($this->isLossyFormat($targetFormat)) {
             $cmd .= ' -quality 90';
         }
-        
+
         $cmd .= ' "' . str_replace('"', '\\"', $newPath) . '"';
 
         exec($cmd, $output, $returnCode);
@@ -401,7 +403,7 @@ class ConvertImagesCommand extends Command
     protected function updateHomepageYaml(string $yamlFile, string $targetFormat, bool $dryRun): void
     {
         $data = Yaml::parseFile($yamlFile) ?? [];
-        
+
         if (!is_array($data)) {
             return;
         }
@@ -435,12 +437,12 @@ class ConvertImagesCommand extends Command
                 if (isset($sponsor['logo'])) {
                     $oldLogo = $sponsor['logo'];
                     $ext = strtolower(pathinfo($oldLogo, PATHINFO_EXTENSION));
-                    
+
                     // Skip SVG files
                     if ($ext === 'svg') {
                         continue;
                     }
-                    
+
                     $newLogo = $this->convertImageFile(null, $oldLogo, $targetFormat, $dryRun, '_media');
                     if ($newLogo && $newLogo !== $oldLogo) {
                         $data['sponsors']['items'][$index]['logo'] = $newLogo;
@@ -466,7 +468,7 @@ class ConvertImagesCommand extends Command
         // Find all YAML files in _data/ directory (excluding games subdirectory which is already processed)
         $yamlFiles = array_merge(
             glob('_data/*.yaml'),
-            glob('_data/*.yml')
+            glob('_data/*.yml'),
         );
 
         foreach ($yamlFiles as $yamlFile) {
@@ -483,7 +485,7 @@ class ConvertImagesCommand extends Command
     protected function processYamlFile(string $yamlFile, string $targetFormat, bool $dryRun): void
     {
         $data = Yaml::parseFile($yamlFile) ?? [];
-        
+
         if (!is_array($data)) {
             return;
         }
@@ -513,7 +515,7 @@ class ConvertImagesCommand extends Command
                 // Check if this looks like an image filename
                 $ext = strtolower(pathinfo($value, PATHINFO_EXTENSION));
                 $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
-                
+
                 if (in_array($ext, $imageExtensions) && $ext !== 'svg') {
                     // Try to convert (for root _media files, year is null)
                     $newValue = $this->convertImageFile(null, $value, $targetFormat, $dryRun, '_media');
@@ -532,20 +534,20 @@ class ConvertImagesCommand extends Command
     {
         $bladeFiles = array_merge(
             glob('_pages/**/*.blade.php'),
-            glob('resources/views/**/*.blade.php')
+            glob('resources/views/**/*.blade.php'),
         );
 
         $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
-        
+
         // List of known image files in _media root that should be converted
         // (exclude favicons and icons that should stay PNG)
         $knownRootImages = [
-            'gamejam_about', 'gamejam_footer', 'gamejam_header', 'gamejam_index_1', 
+            'gamejam_about', 'gamejam_footer', 'gamejam_header', 'gamejam_index_1',
             'gamejam_index_2', 'gamejam_index_3', 'gamejam_video', 'video_bg',
             'sponsor_freistaedter', 'gamejam_logo_fhooe', 'gamejam_logo_pie',
-            '404', '404_text'
+            '404', '404_text',
         ];
-        
+
         foreach ($bladeFiles as $bladeFile) {
             $content = file_get_contents($bladeFile);
             $originalContent = $content;
@@ -555,21 +557,21 @@ class ConvertImagesCommand extends Command
             // Pattern: matches image filenames with extensions in quotes or as strings
             // Also matches URLs like /media/filename.jpg
             $pattern = '/(["\']?)(\/media\/)?([a-zA-Z0-9_-]+\.(?:' . implode('|', $imageExtensions) . '))(\1|["\'])/i';
-            
+
             preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
-            
+
             foreach ($matches as $match) {
                 $quote1 = $match[1] ?? '';
                 $mediaPath = $match[2] ?? '';
                 $imageFile = $match[3] ?? '';
                 $quote2 = $match[4] ?? '';
-                
+
                 if (empty($imageFile)) {
                     continue;
                 }
-                
+
                 $ext = strtolower(pathinfo($imageFile, PATHINFO_EXTENSION));
-                
+
                 // Skip SVG and ICO
                 if ($ext === 'svg' || $ext === 'ico') {
                     continue;
@@ -583,13 +585,13 @@ class ConvertImagesCommand extends Command
                 // Check if file exists in _media root OR if it's already converted
                 $pathInfo = pathinfo($imageFile);
                 $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
-                
+
                 // Build the original match string for replacement
                 $originalMatch = $match[0];
-                
+
                 if (file_exists("_media/{$imageFile}")) {
                     $newFile = $this->convertImageFile(null, $imageFile, $targetFormat, $dryRun, '_media');
-                    
+
                     if ($newFile && $newFile !== $imageFile) {
                         // Replace with same structure
                         $newMatch = $quote1 . $mediaPath . $newFile . $quote2;
@@ -614,4 +616,3 @@ class ConvertImagesCommand extends Command
         }
     }
 }
-

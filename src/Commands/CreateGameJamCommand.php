@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 use App\GameJamData;
 
 use function file_exists;
 use function file_put_contents;
+
+use Illuminate\Console\Command;
+
 use function mkdir;
 use function preg_match;
-use function glob;
 
 /**
  * Command to create a new Game Jam year with metadata file and empty games YAML.
@@ -77,7 +77,7 @@ class CreateGameJamCommand extends Command
         $this->info("  - Jam metadata: _data/jams/{$year}.yaml");
         $this->info("  - Games data: _data/games/games{$year}.yaml");
         $this->info("  - Archive: Will appear in '{$decadeLabel}' navigation menu");
-        
+
         // Check if this is the latest jam
         $allYears = GameJamData::getAvailableYears();
         $highestYear = !empty($allYears) ? max($allYears) : $year;
@@ -169,7 +169,7 @@ class CreateGameJamCommand extends Command
     {
         // Get all available years (including the one we just created)
         $allYears = GameJamData::getAvailableYears();
-        
+
         if (empty($allYears)) {
             $this->warn("No years found, cannot determine latest jam");
             return;
@@ -203,7 +203,7 @@ class CreateGameJamCommand extends Command
         $content = preg_replace(
             "/'latest_jam' => env\('GAMEJAM_LATEST_JAM', '\d+'\),/",
             "'latest_jam' => env('GAMEJAM_LATEST_JAM', '{$year}'),",
-            $content
+            $content,
         );
 
         file_put_contents($configFile, $content);
@@ -237,7 +237,7 @@ class CreateGameJamCommand extends Command
         // Find the exclude array and add the year
         // Pattern: 'exclude' => [ ... '2024', ... ],
         $pattern = "/(\s+)'exclude' => \[(\s+)(.*?)(\s+)\],/s";
-        
+
         if (preg_match($pattern, $hydeContent, $matches)) {
             // Extract the existing years
             $existingContent = $matches[3];
@@ -245,7 +245,7 @@ class CreateGameJamCommand extends Command
             $newContent = $existingContent . "            '{$year}',\n";
             $replacement = $matches[1] . "'exclude' => [" . $matches[2] . $newContent . $matches[4] . "],";
             $hydeContent = preg_replace($pattern, $replacement, $hydeContent);
-            
+
             file_put_contents($hydeConfigFile, $hydeContent);
             $this->info("Updated config/hyde.php: added {$year} to navigation exclude list");
         } else {
@@ -253,4 +253,3 @@ class CreateGameJamCommand extends Command
         }
     }
 }
-

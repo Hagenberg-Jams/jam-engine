@@ -4,27 +4,28 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Str;
-use Symfony\Component\Yaml\Yaml;
-
-use function file_exists;
-use function file_put_contents;
-use function is_dir;
-use function mkdir;
-use function glob;
-use function is_array;
-use function is_string;
-use function exec;
-use function unlink;
-use function rmdir;
-use function scandir;
-use function hash_file;
-use function preg_match;
-use function pathinfo;
 use function array_filter;
 use function array_map;
+use function exec;
+use function file_exists;
+use function file_put_contents;
+use function glob;
+use function hash_file;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Str;
+
+use function is_array;
+use function is_dir;
+use function mkdir;
+use function pathinfo;
+use function preg_match;
+use function scandir;
 use function sort;
+
+use Symfony\Component\Yaml\Yaml;
+
+use function unlink;
 
 /**
  * Command to add a new game to a Game Jam year.
@@ -300,7 +301,7 @@ class AddGameCommand extends Command
     protected function parsePlayersInput(string $input): string
     {
         $input = trim($input);
-        
+
         // Check if it's a range (e.g., "3-8", "2-4")
         if (preg_match('/^(\d+)\s*-\s*(\d+)$/', $input, $matches)) {
             $min = (int) $matches[1];
@@ -309,13 +310,13 @@ class AddGameCommand extends Command
                 return "{$min}-{$max}";
             }
         }
-        
+
         // Check if it's a single number
         $single = (int) $input;
         if ($single > 0) {
             return (string) $single;
         }
-        
+
         // Default to 1 if invalid
         return '1';
     }
@@ -608,22 +609,22 @@ class AddGameCommand extends Command
 
         foreach ($downloadFiles as $downloadFile) {
             $originalFileName = basename($downloadFile);
-            
+
             // Ask for platform interactively
             $this->info("File: {$originalFileName}");
             $this->line("Select platform:");
             foreach ($platformOptions as $key => $platform) {
                 $this->line("  {$key}. {$platform}");
             }
-            
+
             $selected = $this->ask('Platform (1-4)', '1');
             $platform = $platformOptions[$selected] ?? $platformOptions['1'];
-            
+
             // Generate new filename: {slug}-{Platform}.zip
             $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
             $newFileName = "{$this->gameSlug}-{$platform}.{$extension}";
             $targetPath = "{$gamesDir}/{$newFileName}";
-            
+
             // Check if target file already exists
             if (file_exists($targetPath)) {
                 if (!$this->confirm("File {$newFileName} already exists. Overwrite?", false)) {
@@ -785,4 +786,3 @@ class AddGameCommand extends Command
         $this->info('Cleanup complete.');
     }
 }
-

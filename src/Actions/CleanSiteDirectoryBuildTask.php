@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use Hyde\Hyde;
 use Hyde\Framework\Features\BuildTasks\PreBuildTask;
-use Hyde\Facades\Filesystem;
+use Hyde\Hyde;
 
 use function is_dir;
 use function rmdir;
-use function unlink;
 use function scandir;
+use function unlink;
 
 /**
  * Pre-build task to completely empty the _site directory before building.

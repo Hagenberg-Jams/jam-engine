@@ -5,21 +5,23 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\GameJamData;
-use Hyde\Hyde;
-use Hyde\Framework\Features\BuildTasks\PostBuildTask;
-use Hyde\Framework\Concerns\InteractsWithDirectories;
 
-use function is_dir;
-use function mkdir;
 use function copy;
-use function scandir;
-use function is_file;
 use function file_exists;
-use function hash_file;
-use function is_array;
-use function is_string;
 use function glob;
+use function hash_file;
+
+use Hyde\Framework\Concerns\InteractsWithDirectories;
+use Hyde\Framework\Features\BuildTasks\PostBuildTask;
+use Hyde\Hyde;
+
+use function is_array;
+use function is_dir;
+use function is_file;
+use function is_string;
+use function mkdir;
 use function preg_match;
+use function scandir;
 
 /**
  * Post-build task to copy the games directory to the output directory.
@@ -212,4 +214,3 @@ class CopyGamesBuildTask extends PostBuildTask
         }
     }
 }
-

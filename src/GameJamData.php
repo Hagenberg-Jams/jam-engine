@@ -37,21 +37,21 @@ class GameJamData
     public static function getGames(int $year): array
     {
         $key = "games{$year}";
-        
+
         if (isset(self::$cache[$key])) {
             return self::$cache[$key];
         }
 
         $yamlFile = base_path("_data/games/games{$year}.yaml");
-        
+
         if (!file_exists($yamlFile)) {
             return [];
         }
 
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
-        
+
         self::$cache[$key] = $data ?? [];
-        
+
         return self::$cache[$key];
     }
 
@@ -61,13 +61,13 @@ class GameJamData
     public static function getJam(int $year): ?array
     {
         $yamlFile = base_path("_data/jams/{$year}.yaml");
-        
+
         if (!file_exists($yamlFile)) {
             return null;
         }
 
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
-        
+
         return is_array($data) ? $data : null;
     }
 
@@ -98,7 +98,7 @@ class GameJamData
     public static function getRules(): array
     {
         $yamlFile = base_path("_data/rules.yaml");
-        
+
         if (!file_exists($yamlFile)) {
             return [];
         }
@@ -111,4 +111,3 @@ class GameJamData
      * Use config('gamejam.*') directly in templates and build tasks.
      */
 }
-
