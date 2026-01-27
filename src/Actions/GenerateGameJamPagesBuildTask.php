@@ -227,16 +227,16 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
                     continue;
                 }
 
-                $gameName = $game['name'];
-                $teamName = is_array($team) && isset($team['name']) ? $team['name'] : '';
-                $members = is_array($team) && isset($team['members']) ? $team['members'] : [];
+                $gameName = is_string($game['name'] ?? null) ? $game['name'] : '';
+                $teamName = is_array($team) && isset($team['name']) && is_string($team['name']) ? $team['name'] : '';
+                $members = is_array($team) && isset($team['members']) && is_array($team['members']) ? $team['members'] : [];
 
                 if (!is_string($gameName) || $gameName === '' || !is_array($members)) {
                     continue;
                 }
 
-                $gameSlug = Str::slug($gameName);
-                $teamSlug = Str::slug($teamName);
+                $gameSlug = Str::slug(is_string($gameName) ? $gameName : '');
+                $teamSlug = Str::slug(is_string($teamName) ? $teamName : '');
 
                 foreach ($members as $member) {
                     if (!is_string($member) || $member === '') {

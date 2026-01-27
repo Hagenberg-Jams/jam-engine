@@ -56,6 +56,8 @@ class GameJamData
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile);
 
         $games = is_array($data) ? $data : [];
+        // Ensure numeric keys for return type
+        $games = array_values($games);
         self::$cache[$key] = $games;
 
         return $games;
@@ -76,7 +78,17 @@ class GameJamData
 
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
 
-        return is_array($data) ? $data : null;
+        if (!is_array($data)) {
+            return null;
+        }
+
+        // Ensure string keys for return type
+        $result = [];
+        foreach ($data as $key => $value) {
+            $result[(string) $key] = $value;
+        }
+
+        return $result;
     }
 
     /**

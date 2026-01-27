@@ -20,6 +20,7 @@
         $description = $game['description'] ?? '';
         $players = $game['players'] ?? 1;
         $controls = $game['controls'] ?? [];
+        $controlsText = $game['controls_text'] ?? null;
         $images = $gameEntry['images'] ?? [];
         $downloads = $gameEntry['download'] ?? [];
         $headerImage = $gameEntry['headerimage'] ?? '';
@@ -43,6 +44,7 @@
         'description' => $description,
         'players' => $players,
         'controls' => $controls,
+        'controlsText' => $controlsText,
         'images' => $images,
         'downloads' => $downloads,
         'headerImage' => $headerImage,

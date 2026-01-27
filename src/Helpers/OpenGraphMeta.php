@@ -18,7 +18,8 @@ class OpenGraphMeta
     /**
      * Get Open Graph meta tags for the current page
      *
-     * @param array $context Context variables from Blade template
+     * @param array<string, mixed> $context Context variables from Blade template
+     * @return array<string, string>
      */
     public function getMetaTags(array $context = []): array
     {
@@ -59,16 +60,17 @@ class OpenGraphMeta
     {
         $homepage = GameJamData::getHomepage();
         $hero = $homepage['hero'] ?? [];
-        $description = $hero['description'] ?? 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
+        $description = is_string($hero['description'] ?? null) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
 
         // Get first hero image
         $heroImages = $hero['images'] ?? [];
-        $image = !empty($heroImages) ? $heroImages[0] : null;
+        $image = !empty($heroImages) && is_array($heroImages) && isset($heroImages[0]) ? $heroImages[0] : null;
+        $imageUrl = $image && is_string($image) ? $this->getImageUrl($image) : $this->getFallbackImage();
 
         return [
             'title' => $this->siteName,
             'description' => $description,
-            'image' => $image ? $this->getImageUrl($image) : $this->getFallbackImage(),
+            'image' => $imageUrl,
             'url' => $this->baseUrl,
             'type' => 'website',
             'site_name' => $this->siteName,
@@ -219,7 +221,7 @@ class OpenGraphMeta
     {
         $homepage = GameJamData::getHomepage();
         $hero = $homepage['hero'] ?? [];
-        $description = $hero['description'] ?? 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
+        $description = is_string($hero['description'] ?? null) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
 
         return [
             'title' => $this->siteName,
@@ -259,8 +261,11 @@ class OpenGraphMeta
         $hero = $homepage['hero'] ?? [];
         $heroImages = $hero['images'] ?? [];
 
-        if (!empty($heroImages)) {
-            return $this->getImageUrl($heroImages[0]);
+        if (!empty($heroImages) && is_array($heroImages) && isset($heroImages[0])) {
+            $image = $heroImages[0];
+            if (is_string($image) && $image !== '') {
+                return $this->getImageUrl($image);
+            }
         }
 
         return $this->baseUrl . '/media/gamejam_index_1.webp';

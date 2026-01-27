@@ -117,7 +117,7 @@ class ConvertImagesCommand extends Command
                     $oldHeader = $entry['headerimage'];
                     $newHeader = $this->convertImageFile($year, $oldHeader, $targetFormat, $dryRun);
 
-                    if ($newHeader && $newHeader !== $oldHeader) {
+                    if ($newHeader && $newHeader !== $oldHeader && is_array($data[$index] ?? null)) {
                         $data[$index]['headerimage'] = $newHeader;
                         $modified = true;
                         if ($dryRun) {
@@ -141,7 +141,7 @@ class ConvertImagesCommand extends Command
                             $oldFile = $image['file'];
                             $newFile = $this->convertImageFile($year, $oldFile, $targetFormat, $dryRun);
 
-                            if ($newFile && $newFile !== $oldFile) {
+                            if ($newFile && $newFile !== $oldFile && is_array($data[$index] ?? null) && is_array($data[$index]['images'] ?? null) && is_array($data[$index]['images'][$imgIndex] ?? null)) {
                                 $data[$index]['images'][$imgIndex]['file'] = $newFile;
                                 $modified = true;
                                 $imageCount++;
@@ -152,7 +152,7 @@ class ConvertImagesCommand extends Command
                             $oldThumb = $image['thumb'];
                             $newThumb = $this->convertImageFile($year, $oldThumb, $targetFormat, $dryRun);
 
-                            if ($newThumb && $newThumb !== $oldThumb) {
+                            if ($newThumb && $newThumb !== $oldThumb && is_array($data[$index] ?? null) && is_array($data[$index]['images'] ?? null) && is_array($data[$index]['images'][$imgIndex] ?? null)) {
                                 $data[$index]['images'][$imgIndex]['thumb'] = $newThumb;
                                 $modified = true;
                                 $thumbCount++;
@@ -459,7 +459,7 @@ class ConvertImagesCommand extends Command
                     }
 
                 $newLogo = $this->convertImageFile(null, $oldLogo, $targetFormat, $dryRun, '_media');
-                if ($newLogo && $newLogo !== $oldLogo) {
+                if ($newLogo && $newLogo !== $oldLogo && is_array($data['sponsors'] ?? null) && is_array($data['sponsors']['items'] ?? null) && is_array($data['sponsors']['items'][$index] ?? null)) {
                     $data['sponsors']['items'][$index]['logo'] = $newLogo;
                     $modified = true;
                 }

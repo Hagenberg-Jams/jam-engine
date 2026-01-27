@@ -116,7 +116,8 @@ class AddGameCommand extends Command
         $this->cleanupInputDirectories();
 
         $this->newLine();
-        $this->info("Successfully added game '{$gameData['name']}' to {$this->year}!");
+        $gameName = is_string($gameData['name'] ?? null) ? $gameData['name'] : 'Unknown';
+        $this->info("Successfully added game '{$gameName}' to {$this->year}!");
         $this->info("  - Images processed and moved to _media/{$this->year}/");
         $this->info("  - Game entry added to _data/games/games{$this->year}.yaml");
 
@@ -216,6 +217,7 @@ class AddGameCommand extends Command
         $players = $this->parsePlayersInput(is_string($playersInput) ? $playersInput : '1');
 
         $controls = $this->askForControls();
+        $controlsText = $this->askForControlsText();
         $description = $this->askForDescription();
         $teamNameInput = $this->ask('Team name');
         $teamName = is_string($teamNameInput) ? $teamNameInput : '';
@@ -226,6 +228,7 @@ class AddGameCommand extends Command
             'name' => $name,
             'players' => $players,
             'controls' => $controls,
+            'controlsText' => $controlsText,
             'description' => $description,
             'teamName' => $teamName,
             'teamMembers' => $teamMembers,
@@ -257,6 +260,33 @@ class AddGameCommand extends Command
         }
 
         return empty($selected) ? ['keyboard'] : $selected;
+    }
+
+    protected function askForControlsText(): ?string
+    {
+        $this->info('Controls text (optional - detailed control instructions):');
+        $this->info('Enter the controls text (multiline). Type "---END---" on a new line when finished, or press Enter to skip:');
+        $this->newLine();
+
+        $lines = [];
+        $firstLine = $this->ask('', '');
+        if (empty($firstLine) || $firstLine === '---END---') {
+            return null;
+        }
+        $lines[] = $firstLine;
+
+        while (true) {
+            $line = $this->ask('', '');
+            if ($line === '---END---') {
+                break;
+            }
+            if (!empty($line)) {
+                $lines[] = $line;
+            }
+        }
+
+        $text = implode("\n", $lines);
+        return empty(trim($text)) ? null : $text;
     }
 
     protected function askForDescription(): string
@@ -340,6 +370,9 @@ class AddGameCommand extends Command
         return '1';
     }
 
+    /**
+     * @return array<string>
+     */
     protected function parseTeamMembers(string $input): array
     {
         // Try different separators
@@ -752,6 +785,7 @@ class AddGameCommand extends Command
                 'name' => $gameData['name'],
                 'players' => $gameData['players'],
                 'controls' => $gameData['controls'],
+                'controls_text' => $gameData['controlsText'] ?? null,
                 'description' => $gameData['description'],
             ],
             'team' => [

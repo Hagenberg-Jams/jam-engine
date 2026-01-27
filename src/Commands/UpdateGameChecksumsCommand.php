@@ -149,8 +149,11 @@ class UpdateGameChecksumsCommand extends Command
                 }
 
                 // Update checksum if it's missing or different
-                if (!isset($download['checksum']) || $download['checksum'] !== $checksum) {
+                if (!isset($download['checksum']) || (is_string($download['checksum'] ?? null) && $download['checksum'] !== $checksum)) {
                     if (!is_array($data[$index]) || !is_array($data[$index]['download'] ?? null)) {
+                        continue;
+                    }
+                    if (!is_array($data[$index]['download'][$downloadIndex] ?? null)) {
                         continue;
                     }
                     $data[$index]['download'][$downloadIndex]['checksum'] = $checksum;
