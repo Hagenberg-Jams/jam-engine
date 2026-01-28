@@ -43,6 +43,12 @@ class CopyGamesBuildTask extends PostBuildTask
 
     public function handle(): void
     {
+        $gamesBaseUrl = config('gamejam.games_base_url');
+        if (!empty($gamesBaseUrl)) {
+            $this->skip('Game downloads served from external URL (GAMES_BASE_URL), skipping copy');
+            return;
+        }
+
         $sourceDir = base_path('games');
         $targetDir = Hyde::sitePath('games');
 

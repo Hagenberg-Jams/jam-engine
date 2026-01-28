@@ -147,7 +147,8 @@
                             $file = $download['file'] ?? '';
                             $platform = $download['platform'] ?? 'Download';
                             $isUrl = str_starts_with($file, 'http://') || str_starts_with($file, 'https://');
-                            $downloadUrl = $isUrl ? $file : "/games/{$year}/{$file}";
+                            $base = config('gamejam.games_base_url');
+                            $downloadUrl = $isUrl ? $file : ($base ? rtrim($base, '/') . '/games/' . $year . '/' . $file : "/games/{$year}/{$file}");
                         @endphp
                         <a href="{{ $downloadUrl }}"
                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-lg text-center font-semibold transition-colors"
