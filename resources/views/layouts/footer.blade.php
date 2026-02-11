@@ -16,7 +16,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Logo -->
                 <div>
-                    <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name', 'Hagenberg Game Jam') }}" class="h-24">
+                    <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name', 'Hagenberg Game Jam') }}" width="96" height="96" class="h-24">
                 </div>
 
                 <!-- Contact -->
