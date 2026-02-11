@@ -96,8 +96,8 @@ class OpenGraphMeta
         }
 
         $title = "Hagenberg Game Jam {$year}";
-        $description = (is_array($jam) && isset($jam['topic']) && is_string($jam['topic'])) 
-            ? $jam['topic'] 
+        $description = (is_array($jam) && isset($jam['topic']) && is_string($jam['topic']))
+            ? $jam['topic']
             : "Games from the {$year} Hagenberg Game Jam";
         if ($jam && isset($jam['topic']) && is_string($jam['topic'])) {
             $description = "{$year} Hagenberg Game Jam: {$jam['topic']}";

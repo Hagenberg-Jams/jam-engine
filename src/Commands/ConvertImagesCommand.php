@@ -453,10 +453,10 @@ class ConvertImagesCommand extends Command
                 $oldLogo = $sponsor['logo'];
                 $ext = strtolower(pathinfo($oldLogo, PATHINFO_EXTENSION));
 
-                    // Skip SVG files
-                    if ($ext === 'svg') {
-                        continue;
-                    }
+                // Skip SVG files
+                if ($ext === 'svg') {
+                    continue;
+                }
 
                 $newLogo = $this->convertImageFile(null, $oldLogo, $targetFormat, $dryRun, '_media');
                 if ($newLogo && $newLogo !== $oldLogo && is_array($data['sponsors'] ?? null) && is_array($data['sponsors']['items'] ?? null) && is_array($data['sponsors']['items'][$index] ?? null)) {

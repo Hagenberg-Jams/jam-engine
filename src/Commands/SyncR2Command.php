@@ -4,27 +4,24 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
-use Aws\S3\S3Client;
-use Aws\Exception\AwsException;
-
-use function array_filter;
 use function array_map;
+
+use Aws\Exception\AwsException;
+use Aws\S3\S3Client;
+
 use function file_exists;
 use function glob;
-use function hash_file;
+
+use Illuminate\Console\Command;
+
 use function is_dir;
+use function is_file;
+use function is_string;
 use function mkdir;
-use function pathinfo;
 use function preg_match;
 use function scandir;
 use function str_replace;
 use function str_starts_with;
-
-use Illuminate\Console\Command;
-
-use function is_file;
-use function is_string;
-use function rtrim;
 
 /**
  * Command to synchronize game files between local games/ directory and Cloudflare R2 bucket.
