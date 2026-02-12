@@ -805,9 +805,9 @@ class AddGameCommand extends Command
         $data[] = $entry;
 
         // Sort all entries alphabetically by game name (case-insensitive)
-        usort($data, function (array $a, array $b): int {
-            $nameA = $a['game']['name'] ?? '';
-            $nameB = $b['game']['name'] ?? '';
+        usort($data, function (mixed $a, mixed $b): int {
+            $nameA = (is_array($a) && isset($a['game']) && is_array($a['game']) && isset($a['game']['name'])) ? (is_string($a['game']['name']) ? $a['game']['name'] : '') : '';
+            $nameB = (is_array($b) && isset($b['game']) && is_array($b['game']) && isset($b['game']['name'])) ? (is_string($b['game']['name']) ? $b['game']['name'] : '') : '';
             return strcasecmp($nameA, $nameB);
         });
 
