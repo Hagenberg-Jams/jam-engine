@@ -83,6 +83,15 @@ document.addEventListener('DOMContentLoaded', function() {
         openEffect: 'fade',
         closeEffect: 'fade',
     });
+
+    // Fix: Blur focused element before GLightbox sets aria-hidden on main content.
+    // Otherwise "Blocked aria-hidden... descendant retained focus" warning occurs.
+    document.addEventListener('click', function(e) {
+        const glightbox = e.target.closest('.glightbox');
+        if (glightbox && document.activeElement && glightbox.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    }, true);
 });
 
 // Smooth scroll to top - show button when navigation is not visible
