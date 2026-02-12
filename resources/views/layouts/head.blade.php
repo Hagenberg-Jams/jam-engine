@@ -25,8 +25,8 @@
     <link rel="manifest" href="/media/site.webmanifest">
 @endif
 
-{{-- App Meta Tags --}}
-@include('hyde::layouts.meta')
+{{-- App Meta Tags (custom meta excludes invalid rel="sitemap" link) --}}
+@include('layouts.meta')
 
 {{-- Open Graph / Twitter Card Meta Tags --}}
 @php

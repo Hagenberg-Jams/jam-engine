@@ -7,7 +7,7 @@
         $jsPath = '/media/app.js';
         $cacheBust = file_exists(base_path('_media/app.js')) ? '?v=' . substr(md5_file(base_path('_media/app.js')), 0, 8) : '';
     @endphp
-    <script type="module" defer src="{{ $jsPath }}{{ $cacheBust }}"></script>
+    <script type="module" src="{{ $jsPath }}{{ $cacheBust }}"></script>
 @endif
 
 {{-- Alpine.js with Collapse plugin --}}
