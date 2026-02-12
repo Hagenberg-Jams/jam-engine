@@ -36,13 +36,12 @@
             <summary class="group flex items-center gap-1 cursor-pointer list-none [&::-webkit-details-marker]:hidden"
                     aria-haspopup="true">
                 <span class="block my-2 md:my-0 md:inline-block py-1 text-gray-700 hover:text-gray-900 dark:text-gray-100">{{ $label }}</span>
-                <button type="button" class="dropdown-button inline-flex cursor-pointer items-center py-1 text-gray-700 hover:text-gray-900 dark:text-gray-100" aria-label="{{ $label }} – expand to view years"
-                        onclick="var d=this.closest('details'); d.toggleAttribute('open'); event.preventDefault(); event.stopPropagation();">
+                <span class="dropdown-button inline-flex cursor-pointer items-center py-1 text-gray-700 hover:text-gray-900 dark:text-gray-100" aria-hidden="true">
                     <svg class="dropdown-chevron inline transition-transform duration-200 ease-in-out dark:fill-white" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000" aria-hidden="true">
                         <path d="M0 0h24v24H0z" fill="none"/>
                         <path d="M7 10l5 5 5-5z"/>
                     </svg>
-                </button>
+                </span>
             </summary>
             <div class="dropdown absolute shadow-lg bg-white dark:bg-gray-700 z-50 right-0 mt-1">
                 <ul class="dropdown-items px-3 py-2">
