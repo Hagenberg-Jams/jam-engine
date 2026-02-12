@@ -137,8 +137,11 @@ class PrintGameSheetsCommand extends Command
         // Prepare image paths (use full images for PDF)
         $imagePaths = [];
         foreach ($images as $image) {
-            $imageFile = $image['file'] ?? '';
-            if ($imageFile) {
+            if (!is_array($image) || !isset($image['file'])) {
+                continue;
+            }
+            $imageFile = is_string($image['file']) ? $image['file'] : '';
+            if ($imageFile !== '') {
                 $fullPath = base_path("_media/{$year}/{$imageFile}");
                 if (file_exists($fullPath)) {
                     $imagePaths[] = $fullPath;
@@ -160,7 +163,7 @@ class PrintGameSheetsCommand extends Command
 
         // Prepare input methods
         $inputMethods = null;
-        if (!empty($controls) && is_array($controls)) {
+        if (!empty($controls)) {
             $inputMethods = implode(', ', array_map(function ($control): string {
                 return ucfirst(is_string($control) ? $control : '');
             }, $controls));
@@ -168,7 +171,7 @@ class PrintGameSheetsCommand extends Command
 
         // Prepare platforms
         $platforms = null;
-        if (!empty($downloads) && is_array($downloads)) {
+        if (!empty($downloads)) {
             $platformList = collect($downloads)->pluck('platform')->unique()->values()->toArray();
             if (!empty($platformList)) {
                 $platforms = implode(', ', $platformList);

@@ -1,3 +1,6 @@
+includes:
+    - phpstan-baseline.neon
+
 parameters:
     paths:
         - app
@@ -8,6 +11,8 @@ parameters:
 
     # Memory limit for PHPStan
     tmpDir: .phpstan
+
+    treatPhpDocTypesAsCertain: false
 
     excludePaths:
         - vendor

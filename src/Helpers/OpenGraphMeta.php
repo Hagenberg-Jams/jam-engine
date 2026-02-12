@@ -11,7 +11,8 @@ class OpenGraphMeta
 
     public function __construct()
     {
-        $this->baseUrl = rtrim((string) config('gamejam.website', 'https://hagenberg-gamejam.at'), '/');
+        $website = config('gamejam.website', 'https://hagenberg-gamejam.at');
+        $this->baseUrl = rtrim(is_string($website) ? $website : 'https://hagenberg-gamejam.at', '/');
         $this->siteName = 'Hagenberg Game Jam';
     }
 
@@ -23,27 +24,33 @@ class OpenGraphMeta
      */
     public function getMetaTags(array $context = []): array
     {
-        // Extract context variables
-        $year = $context['year'] ?? null;
-        $gameName = $context['gameName'] ?? null;
-        $description = $context['description'] ?? null;
-        $headerImage = $context['headerImage'] ?? null;
-        $personName = $context['personName'] ?? null;
-        $totalGames = $context['totalGames'] ?? 0;
-        $years = $context['years'] ?? [];
+        // Extract context variables with type coercion
+        $year = is_int($context['year'] ?? null) ? $context['year'] : null;
+        $gameName = is_string($context['gameName'] ?? null) ? $context['gameName'] : null;
+        $description = is_string($context['description'] ?? null) ? $context['description'] : null;
+        $headerImage = is_string($context['headerImage'] ?? null) ? $context['headerImage'] : null;
+        $personName = is_string($context['personName'] ?? null) ? $context['personName'] : null;
+        $totalGames = is_int($context['totalGames'] ?? null) ? $context['totalGames'] : 0;
+        $years = is_array($context['years'] ?? null) ? $context['years'] : [];
         $persons = $context['persons'] ?? null;
-        $jam = $context['jam'] ?? null;
-        $games = $context['games'] ?? null;
+        $jam = is_array($context['jam'] ?? null) ? $context['jam'] : null;
+        $games = is_array($context['games'] ?? null) ? $context['games'] : null;
 
         // Detect page type
         if ($gameName && $year) {
             return $this->getGameMeta($year, $gameName, $description, $headerImage);
         }
-        if ($year && !$gameName) {
-            return $this->getYearMeta($year, $jam, $games);
+        if ($year !== null && $gameName === null) {
+            /** @var array<string, mixed>|null $jamTyped */
+            $jamTyped = $jam;
+            /** @var array<int, array<string, mixed>>|null $gamesTyped */
+            $gamesTyped = $games;
+            return $this->getYearMeta($year, $jamTyped, $gamesTyped);
         }
-        if ($personName) {
-            return $this->getPersonMeta($personName, $totalGames, $years);
+        if ($personName !== null) {
+            /** @var array<int> $yearsFiltered */
+            $yearsFiltered = array_values(array_filter($years, 'is_int'));
+            return $this->getPersonMeta($personName, $totalGames, $yearsFiltered);
         }
         if ($persons !== null) {
             return $this->getPeopleMeta();
@@ -59,13 +66,13 @@ class OpenGraphMeta
     protected function getHomepageMeta(): array
     {
         $homepage = GameJamData::getHomepage();
-        $hero = $homepage['hero'] ?? [];
-        $description = is_string($hero['description'] ?? null) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
+        $hero = isset($homepage['hero']) && is_array($homepage['hero']) ? $homepage['hero'] : [];
+        $description = isset($hero['description']) && is_string($hero['description']) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
 
         // Get first hero image
-        $heroImages = $hero['images'] ?? [];
-        $image = !empty($heroImages) && is_array($heroImages) && isset($heroImages[0]) ? $heroImages[0] : null;
-        $imageUrl = $image && is_string($image) ? $this->getImageUrl($image) : $this->getFallbackImage();
+        $heroImages = isset($hero['images']) && is_array($hero['images']) ? $hero['images'] : [];
+        $image = !empty($heroImages) && isset($heroImages[0]) && is_string($heroImages[0]) ? $heroImages[0] : null;
+        $imageUrl = $image !== null ? $this->getImageUrl($image) : $this->getFallbackImage();
 
         return [
             'title' => $this->siteName,
@@ -96,36 +103,30 @@ class OpenGraphMeta
         }
 
         $title = "Hagenberg Game Jam {$year}";
-        $description = (is_array($jam) && isset($jam['topic']) && is_string($jam['topic']))
-            ? $jam['topic']
-            : "Games from the {$year} Hagenberg Game Jam";
-        if ($jam && isset($jam['topic']) && is_string($jam['topic'])) {
+        $description = "Games from the {$year} Hagenberg Game Jam";
+        if ($jam !== null && isset($jam['topic']) && is_string($jam['topic'])) {
             $description = "{$year} Hagenberg Game Jam: {$jam['topic']}";
         }
 
         // Find header image: first winner game, or first game
         $image = null;
         foreach ($games as $entry) {
-            if (!is_array($entry)) {
+            if (!is_array($entry) || !isset($entry['winner']) || $entry['winner'] === 'no' || $entry['winner'] === '') {
                 continue;
             }
-            if (isset($entry['winner']) && $entry['winner'] !== 'no' && $entry['winner'] !== '') {
-                $headerImage = $entry['headerimage'] ?? '';
-                if (is_string($headerImage) && $headerImage !== '') {
-                    $image = $this->getImageUrl($headerImage, $year);
-                    break;
-                }
+            $headerImage = $entry['headerimage'] ?? '';
+            if (is_string($headerImage) && $headerImage !== '') {
+                $image = $this->getImageUrl($headerImage, $year);
+                break;
             }
         }
 
         // If no winner image found, use first game's header image
         if (!$image && !empty($games)) {
             $firstEntry = $games[0];
-            if (is_array($firstEntry)) {
-                $headerImage = $firstEntry['headerimage'] ?? '';
-                if (is_string($headerImage) && $headerImage !== '') {
-                    $image = $this->getImageUrl($headerImage, $year);
-                }
+            $headerImage = isset($firstEntry['headerimage']) ? $firstEntry['headerimage'] : '';
+            if (is_string($headerImage) && $headerImage !== '') {
+                $image = $this->getImageUrl($headerImage, $year);
             }
         }
 
@@ -220,8 +221,8 @@ class OpenGraphMeta
     protected function getDefaultMeta(): array
     {
         $homepage = GameJamData::getHomepage();
-        $hero = $homepage['hero'] ?? [];
-        $description = is_string($hero['description'] ?? null) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
+        $hero = isset($homepage['hero']) && is_array($homepage['hero']) ? $homepage['hero'] : [];
+        $description = isset($hero['description']) && is_string($hero['description']) ? $hero['description'] : 'Hagenberg Game Jam is a recurring 36-hour game jam held at the end of December at the Upper Austria University of Applied Sciences – Hagenberg Campus, organized by the Department of Digital Media.';
 
         return [
             'title' => $this->siteName,
@@ -258,14 +259,11 @@ class OpenGraphMeta
     protected function getFallbackImage(): string
     {
         $homepage = GameJamData::getHomepage();
-        $hero = $homepage['hero'] ?? [];
-        $heroImages = $hero['images'] ?? [];
+        $hero = isset($homepage['hero']) && is_array($homepage['hero']) ? $homepage['hero'] : [];
+        $heroImages = isset($hero['images']) && is_array($hero['images']) ? $hero['images'] : [];
 
-        if (!empty($heroImages) && is_array($heroImages) && isset($heroImages[0])) {
-            $image = $heroImages[0];
-            if (is_string($image) && $image !== '') {
-                return $this->getImageUrl($image);
-            }
+        if (!empty($heroImages) && isset($heroImages[0]) && is_string($heroImages[0]) && $heroImages[0] !== '') {
+            return $this->getImageUrl($heroImages[0]);
         }
 
         return $this->baseUrl . '/media/gamejam_index_1.webp';

@@ -255,9 +255,9 @@ class ConvertImagesCommand extends Command
         exec('magick -list format', $output, $returnCode);
 
         if ($returnCode !== 0) {
-            // Fallback: assume common formats are supported
+            // Fallback: assume common formats are supported when ImageMagick version check fails
             $commonFormats = ['webp', 'jpg', 'jpeg', 'png', 'gif', 'avif', 'heic', 'heif', 'jxl'];
-            return in_array(strtolower($format), $commonFormats);
+            return in_array(strtolower($format), $commonFormats, true);
         }
 
         // Parse ImageMagick format list
@@ -383,9 +383,8 @@ class ConvertImagesCommand extends Command
             return null;
         }
 
-        // Delete old file ONLY if conversion was successful AND new file exists
-        // This prevents deleting the original if conversion failed
-        if ($oldPath !== $newPath && file_exists($newPath)) {
+        // Delete old file ONLY if conversion was successful AND paths differ
+        if ($oldPath !== $newPath) {
             @unlink($oldPath);
         }
 
@@ -421,7 +420,7 @@ class ConvertImagesCommand extends Command
         $modified = false;
 
         // Update hero images
-        if (isset($data['hero']['images']) && is_array($data['hero']['images'])) {
+        if (isset($data['hero']) && is_array($data['hero']) && isset($data['hero']['images']) && is_array($data['hero']['images'])) {
             foreach ($data['hero']['images'] as $index => $imageFile) {
                 if (!is_string($imageFile)) {
                     continue;
@@ -520,8 +519,8 @@ class ConvertImagesCommand extends Command
     }
 
     /**
-     * @param array<string, mixed> $data
-     * @return array<string, mixed>
+     * @param array<string, mixed>|array<int, mixed> $data
+     * @return array<string, mixed>|array<int, mixed>
      */
     protected function processYamlData(array $data, string $targetFormat, bool $dryRun, string $yamlFile, bool &$modified): array
     {
@@ -533,7 +532,7 @@ class ConvertImagesCommand extends Command
                 $ext = strtolower(pathinfo($value, PATHINFO_EXTENSION));
                 $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif', 'jxl', 'bmp', 'tiff', 'tif'];
 
-                if (in_array($ext, $imageExtensions) && $ext !== 'svg') {
+                if (in_array($ext, $imageExtensions, true)) {
                     // Try to convert (for root _media files, year is null)
                     $newValue = $this->convertImageFile(null, $value, $targetFormat, $dryRun, '_media');
                     if ($newValue && $newValue !== $value) {
@@ -580,15 +579,16 @@ class ConvertImagesCommand extends Command
             preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
 
             foreach ($matches as $match) {
-                if (!is_array($match) || count($match) < 4) {
+                if (count($match) < 5) {
                     continue;
                 }
+                // preg_match_all returns fixed structure
                 $quote1 = is_string($match[1] ?? null) ? $match[1] : '';
                 $mediaPath = is_string($match[2] ?? null) ? $match[2] : '';
                 $imageFile = is_string($match[3] ?? null) ? $match[3] : '';
                 $quote2 = is_string($match[4] ?? null) ? $match[4] : '';
 
-                if (empty($imageFile)) {
+                if ($imageFile === '') {
                     continue;
                 }
 
@@ -609,7 +609,7 @@ class ConvertImagesCommand extends Command
                 $targetFile = $pathInfo['filename'] . '.' . $targetFormat;
 
                 // Build the original match string for replacement
-                $originalMatch = is_string($match[0] ?? null) ? $match[0] : '';
+                $originalMatch = $match[0] ?? '';
 
                 if (file_exists("_media/{$imageFile}")) {
                     $newFile = $this->convertImageFile(null, $imageFile, $targetFormat, $dryRun, '_media');

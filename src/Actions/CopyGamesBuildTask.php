@@ -95,14 +95,11 @@ class CopyGamesBuildTask extends PostBuildTask
                 }
 
                 foreach ($games as $entry) {
-                    if (!is_array($entry) || !isset($entry['download'])) {
+                    if (!isset($entry['download']) || !is_array($entry['download'])) {
                         continue;
                     }
 
                     $downloads = $entry['download'];
-                    if (!is_array($downloads)) {
-                        continue;
-                    }
 
                     foreach ($downloads as $download) {
                         if (!is_array($download) || !isset($download['file'])) {

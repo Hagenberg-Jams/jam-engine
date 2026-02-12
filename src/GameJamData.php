@@ -7,7 +7,7 @@ namespace App;
  */
 class GameJamData
 {
-    /** @var array<string, array<string, mixed>> */
+    /** @var array<string, mixed> */
     protected static array $cache = [];
 
     /**
@@ -20,7 +20,8 @@ class GameJamData
         $key = 'homepage';
 
         if (isset(self::$cache[$key])) {
-            return self::$cache[$key];
+            $cached = self::$cache[$key];
+            return is_array($cached) ? $cached : [];
         }
 
         $yamlFile = base_path('_data/homepage.yaml');
@@ -29,9 +30,10 @@ class GameJamData
         }
 
         $data = \Symfony\Component\Yaml\Yaml::parseFile($yamlFile) ?? [];
-        self::$cache[$key] = is_array($data) ? $data : [];
+        $result = is_array($data) ? $data : [];
+        self::$cache[$key] = $result;
 
-        return self::$cache[$key];
+        return $result;
     }
 
     /**
@@ -44,7 +46,13 @@ class GameJamData
         $key = "games{$year}";
 
         if (isset(self::$cache[$key])) {
-            return self::$cache[$key];
+            $cached = self::$cache[$key];
+            if (!is_array($cached)) {
+                return [];
+            }
+            /** @var array<int, array<string, mixed>> $result */
+            $result = array_values($cached);
+            return $result;
         }
 
         $yamlFile = base_path("_data/games/games{$year}.yaml");
@@ -57,10 +65,11 @@ class GameJamData
 
         $games = is_array($data) ? $data : [];
         // Ensure numeric keys for return type
-        $games = array_values($games);
-        self::$cache[$key] = $games;
+        $result = array_values($games);
+        self::$cache[$key] = $result;
 
-        return $games;
+        /** @var array<int, array<string, mixed>> $result */
+        return $result;
     }
 
     /**

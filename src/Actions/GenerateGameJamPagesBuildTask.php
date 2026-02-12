@@ -89,17 +89,17 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
         }
 
         foreach ($games as $entry) {
-            if (!is_array($entry) || !isset($entry['game'])) {
+            if (!isset($entry['game']) || !is_array($entry['game'])) {
                 continue;
             }
 
             $game = $entry['game'];
-            if (!is_array($game) || !isset($game['name'])) {
+            if (!isset($game['name']) || !is_string($game['name'])) {
                 continue;
             }
 
             $name = $game['name'];
-            if (!is_string($name) || $name === '') {
+            if ($name === '') {
                 continue;
             }
 
@@ -140,20 +140,16 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
             }
 
             foreach ($games as $entry) {
-                if (!is_array($entry) || !isset($entry['team'])) {
+                if (!isset($entry['team']) || !is_array($entry['team'])) {
                     continue;
                 }
 
                 $team = $entry['team'];
-                if (!is_array($team) || !isset($team['members'])) {
+                if (!isset($team['members']) || !is_array($team['members'])) {
                     continue;
                 }
 
                 $members = $team['members'];
-
-                if (!is_array($members)) {
-                    continue;
-                }
 
                 foreach ($members as $member) {
                     if (!is_string($member) || $member === '') {
@@ -217,26 +213,26 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
             }
 
             foreach ($games as $entry) {
-                if (!is_array($entry) || !isset($entry['game']) || !isset($entry['team'])) {
+                if (!isset($entry['game']) || !isset($entry['team']) || !is_array($entry['game']) || !is_array($entry['team'])) {
                     continue;
                 }
 
                 $game = $entry['game'];
                 $team = $entry['team'];
-                if (!is_array($game) || !isset($game['name']) || !is_array($team)) {
+                if (!isset($game['name']) || !is_string($game['name'])) {
                     continue;
                 }
 
-                $gameName = is_string($game['name'] ?? null) ? $game['name'] : '';
-                $teamName = is_array($team) && isset($team['name']) && is_string($team['name']) ? $team['name'] : '';
-                $members = is_array($team) && isset($team['members']) && is_array($team['members']) ? $team['members'] : [];
+                $gameName = $game['name'];
+                $teamName = isset($team['name']) && is_string($team['name']) ? $team['name'] : '';
+                $members = isset($team['members']) && is_array($team['members']) ? $team['members'] : [];
 
-                if (!is_string($gameName) || $gameName === '' || !is_array($members)) {
+                if ($gameName === '' || empty($members)) {
                     continue;
                 }
 
-                $gameSlug = Str::slug(is_string($gameName) ? $gameName : '');
-                $teamSlug = Str::slug(is_string($teamName) ? $teamName : '');
+                $gameSlug = Str::slug($gameName);
+                $teamSlug = Str::slug($teamName);
 
                 foreach ($members as $member) {
                     if (!is_string($member) || $member === '') {
@@ -264,11 +260,7 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
         // Register a page for each person
         foreach ($persons as $personName => $games) {
-            if (!is_string($personName)) {
-                continue;
-            }
-
-            $slug = Str::slug($personName);
+            $slug = Str::slug((string) $personName);
             if ($slug === '') {
                 continue;
             }
