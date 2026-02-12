@@ -49,6 +49,14 @@
                 </svg>
                 <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter:</span>
             </div>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <input type="search" id="game-search-input" placeholder="Search games or teams…"
+                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       aria-label="Search games or teams by name">
+                <button type="button" id="game-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
+                    Clear Filter
+                </button>
+            </div>
             <div class="flex flex-wrap justify-center gap-4" id="filter-buttons">
                 <button class="filter-btn active px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
                         data-filter="*">All Games
@@ -176,7 +184,8 @@
                     $winner = $entry['winner'] ?? 'no';
                     $isWinner = $winner !== 'no' && $winner !== '';
                 @endphp
-                <div class="game-card {{ $playerClass }} {{ $controlClasses }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                <div class="game-card {{ $playerClass }} {{ $controlClasses }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                     data-game-name="{{ strtolower($gameName) }}" data-team-name="{{ strtolower($team['name'] ?? '') }}">
                     <div class="relative h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         @if($imagePath && file_exists(base_path("_media/{$year}/{$headerImage}")))
                             <img src="/media/{{ $year }}/{{ $headerImage }}" alt="{{ $gameName }}"
@@ -250,6 +259,41 @@
         document.addEventListener('DOMContentLoaded', function () {
             const filterButtons = document.querySelectorAll('.filter-btn');
             const gameCards = document.querySelectorAll('.game-card');
+            const searchInput = document.getElementById('game-search-input');
+            const clearBtn = document.getElementById('game-search-clear');
+
+            function getActiveCategoryFilter() {
+                const active = document.querySelector('.filter-btn.active');
+                return active ? active.getAttribute('data-filter') : '*';
+            }
+
+            function applyFilters() {
+                const categoryFilter = getActiveCategoryFilter();
+                const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+                gameCards.forEach(card => {
+                    const matchesCategory = categoryFilter === '*' || card.matches(categoryFilter);
+                    const matchesSearch = !searchTerm || (
+                        (card.getAttribute('data-game-name') || '').includes(searchTerm) ||
+                        (card.getAttribute('data-team-name') || '').includes(searchTerm)
+                    );
+                    const show = matchesCategory && matchesSearch;
+
+                    if (show) {
+                        card.style.display = 'block';
+                        setTimeout(() => {
+                            card.style.opacity = '1';
+                            card.style.transform = 'scale(1)';
+                        }, 10);
+                    } else {
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            card.style.display = 'none';
+                        }, 300);
+                    }
+                });
+            }
 
             filterButtons.forEach(button => {
                 button.addEventListener('click', function () {
@@ -259,26 +303,21 @@
                     });
                     this.classList.add('active', 'bg-indigo-600', 'text-white');
                     this.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200');
-
-                    const filter = this.getAttribute('data-filter');
-
-                    gameCards.forEach(card => {
-                        if (filter === '*' || card.matches(filter)) {
-                            card.style.display = 'block';
-                            setTimeout(() => {
-                                card.style.opacity = '1';
-                                card.style.transform = 'scale(1)';
-                            }, 10);
-                        } else {
-                            card.style.opacity = '0';
-                            card.style.transform = 'scale(0.95)';
-                            setTimeout(() => {
-                                card.style.display = 'none';
-                            }, 300);
-                        }
-                    });
+                    applyFilters();
                 });
             });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFilters);
+            }
+
+            if (clearBtn && searchInput) {
+                clearBtn.addEventListener('click', function () {
+                    searchInput.value = '';
+                    searchInput.focus();
+                    applyFilters();
+                });
+            }
 
             gameCards.forEach(card => {
                 card.style.transition = 'opacity 0.3s, transform 0.3s';

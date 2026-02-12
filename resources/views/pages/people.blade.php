@@ -16,10 +16,25 @@
     </div>
 </section>
 
-<!-- Sort Buttons -->
-<section class="py-8 bg-gray-200 dark:bg-gray-800">
+<!-- Filter and Sort -->
+<section class="py-8 bg-gray-200 dark:bg-gray-800" aria-labelledby="filter-heading">
+    <h2 id="filter-heading" class="sr-only">Filter and sort people</h2>
     <div class="container mx-auto px-4">
         <div class="flex flex-wrap items-center justify-center gap-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter:</span>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <input type="search" id="people-search-input" placeholder="Search by name…"
+                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       aria-label="Search people by name">
+                <button type="button" id="people-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
+                    Clear Filter
+                </button>
+            </div>
             <div class="flex items-center gap-2">
                 <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
@@ -100,9 +115,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const sortButtons = document.querySelectorAll('.sort-btn');
     const peopleGrid = document.getElementById('people-grid');
     const personCards = Array.from(document.querySelectorAll('.person-card'));
+    const searchInput = document.getElementById('people-search-input');
+    const clearBtn = document.getElementById('people-search-clear');
 
     if (!peopleGrid || personCards.length === 0) {
         return;
+    }
+
+    function applyNameFilter() {
+        const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        personCards.forEach(card => {
+            const name = (card.getAttribute('data-name') || '');
+            const show = !searchTerm || name.includes(searchTerm);
+            card.style.display = show ? '' : 'none';
+        });
     }
 
     function sortPeople(sortType) {
@@ -180,6 +206,18 @@ document.addEventListener('DOMContentLoaded', function() {
             sortPeople(sortType);
         });
     });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyNameFilter);
+    }
+
+    if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            applyNameFilter();
+        });
+    }
 
     // Initialize transitions
     personCards.forEach(card => {
