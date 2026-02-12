@@ -19,6 +19,8 @@
             {{ $totalGames }} Game{{ $totalGames !== 1 ? 's' : '' }} 
             @if(count($years) > 0)
                 in {{ count($years) }} Game Jam{{ count($years) !== 1 ? 's' : '' }}
+                @php $activeRange = min($years) === max($years) ? (string) max($years) : min($years) . '–' . max($years); @endphp
+                · Active: {{ $activeRange }}
             @endif
         </p>
     </div>

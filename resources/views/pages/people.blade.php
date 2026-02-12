@@ -100,6 +100,8 @@
                             {{ $person['totalGames'] }} Game{{ $person['totalGames'] !== 1 ? 's' : '' }}
                             @if(count($person['years']) > 0)
                                 · {{ count($person['years']) }} Jam{{ count($person['years']) !== 1 ? 's' : '' }}
+                                @php $ys = $person['years']; $activeRange = min($ys) === max($ys) ? (string) max($ys) : min($ys) . '–' . max($ys); @endphp
+                                · Active: {{ $activeRange }}
                             @endif
                         </p>
                     </div>
