@@ -21,7 +21,7 @@
 
                 <!-- Contact -->
                 <div>
-                    <h5 class="text-xl font-bold mb-4">Contact</h5>
+                    <h2 class="text-xl font-bold mb-4">Contact</h2>
                     <ul class="space-y-1 text-gray-300 text-sm">
                         <li><a href="mailto:{{ $email }}" class="hover:text-white transition-colors">{{ $email }}</a></li>
                         <li>{{ $companyName }}</li>
@@ -32,7 +32,7 @@
 
                 <!-- Social Links -->
                 <div>
-                    <h5 class="text-xl font-bold mb-4">Follow Us</h5>
+                    <h2 class="text-xl font-bold mb-4">Follow Us</h2>
                     <div class="flex gap-4">
                         @if($instagramUrl)
                         <a href="{{ $instagramUrl }}" target="_blank" class="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="Instagram">
