@@ -102,7 +102,7 @@
     ];
     
     // Category order
-    $categoryOrder = ['overall', 'jury', 'people', 'risingstars', 'masterminds', 'youngblood'];
+    $categoryOrder = ['overall', 'jury', 'people', 'youngblood', 'risingstars', 'masterminds'];
 @endphp
 
 @if($hasWinners)
