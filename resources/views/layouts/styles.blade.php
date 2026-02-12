@@ -1,5 +1,11 @@
-{{-- Prevent Alpine.js flashes --}}
-<style>[x-cloak] {display: none!important}</style>
+{{-- Mobile nav: show links when nav is open; dropdown chevron rotation --}}
+<style>
+@media (max-width: 767px) {
+    #main-navigation.mobile-nav-open #main-navigation-links { display: block !important; }
+}
+/* Chevron rotate when dropdown is open */
+.dropdown-container details[open] .dropdown-chevron { transform: rotate(180deg); }
+</style>
 
 {{-- The compiled Tailwind/App styles --}}
 @if(Vite::running())

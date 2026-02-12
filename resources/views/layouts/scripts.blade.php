@@ -10,10 +10,6 @@
     <script type="module" src="{{ $jsPath }}{{ $cacheBust }}"></script>
 @endif
 
-{{-- Alpine.js with Collapse plugin --}}
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.10.3/dist/cdn.min.js" integrity="sha256-gOkV4d9/FmMNEkjOzVlyM2eNAWSUXisT+1RbMTTIgXI=" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-
 <script>
     function toggleTheme() {
         if (localStorage.getItem('color-theme') === 'dark' || !('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -26,6 +22,57 @@
             document.getElementById('meta-color-scheme').setAttribute('content', 'dark');
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var nav = document.getElementById('main-navigation');
+        var toggleBtn = document.getElementById('navigation-toggle-button');
+        var navLinks = document.getElementById('main-navigation-links');
+        var openIcon = document.getElementById('open-main-navigation-menu-icon');
+        var closeIcon = document.getElementById('close-main-navigation-menu-icon');
+
+        function closeNav() {
+            if (nav) nav.classList.remove('mobile-nav-open');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+            if (openIcon) openIcon.classList.remove('hidden');
+            if (closeIcon) closeIcon.classList.add('hidden');
+        }
+
+        function openNav() {
+            if (nav) nav.classList.add('mobile-nav-open');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+            if (openIcon) openIcon.classList.add('hidden');
+            if (closeIcon) closeIcon.classList.remove('hidden');
+        }
+
+        function toggleNav() {
+            if (nav && nav.classList.contains('mobile-nav-open')) {
+                closeNav();
+            } else {
+                openNav();
+            }
+        }
+
+        if (toggleBtn && navLinks) {
+            toggleBtn.addEventListener('click', toggleNav);
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeNav();
+                document.querySelectorAll('.dropdown-container details[open]').forEach(function (d) {
+                    d.removeAttribute('open');
+                });
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('.dropdown-container details[open]').forEach(function (details) {
+                if (!details.contains(e.target)) {
+                    details.removeAttribute('open');
+                }
+            });
+        });
+    });
 </script>
 
 {{-- Add any extra scripts to include before the closing <body> tag --}}

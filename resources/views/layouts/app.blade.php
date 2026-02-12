@@ -7,7 +7,7 @@
         @include('hyde::layouts.head')
     @endif
 </head>
-<body id="app" class="flex flex-col min-h-screen overflow-x-hidden dark:bg-gray-900 dark:text-white" x-data="{ navigationOpen: false }" x-on:keydown.escape="navigationOpen = false;">
+<body id="app" class="flex flex-col min-h-screen overflow-x-hidden dark:bg-gray-900 dark:text-white">
     @include('hyde::components.skip-to-content-button')
     <header class="{{ $__env->hasSection('header') ? 'h-screen flex flex-col' : '' }}">
         @if(view()->exists('layouts.navigation'))

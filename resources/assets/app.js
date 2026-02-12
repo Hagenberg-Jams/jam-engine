@@ -114,8 +114,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Mobile menu toggle (Alpine.js is already included in Hyde)
-// No additional code needed as Alpine.js handles it
-
-// Note: Alpine.js Collapse is handled via CDN in the scripts layout
+// Mobile menu toggle and dropdown close handlers are in scripts.blade.php (vanilla JS)
 // The x-collapse directive will work automatically
