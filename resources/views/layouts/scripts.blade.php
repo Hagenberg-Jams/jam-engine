@@ -72,6 +72,62 @@
                 }
             });
         });
+
+        // Cookie consent (DSGVO)
+        var cookieBanner = document.getElementById('cookie-banner');
+        var cookieAccept = document.getElementById('cookie-accept');
+        var cookieReject = document.getElementById('cookie-reject');
+        var youtubeAcceptCookies = document.getElementById('youtube-accept-cookies');
+        var cookiePlaceholder = document.getElementById('youtube-cookie-placeholder');
+        var videoContainer = document.getElementById('youtube-video-container');
+        var consentKey = 'cookie-consent-youtube';
+
+        function applyConsentState() {
+            var consent = localStorage.getItem(consentKey);
+
+            if (consent === 'accepted') {
+                if (cookieBanner) cookieBanner.classList.add('hidden');
+                if (cookiePlaceholder) cookiePlaceholder.classList.add('hidden');
+                if (videoContainer) videoContainer.classList.remove('hidden');
+            } else if (consent === 'rejected') {
+                if (cookieBanner) cookieBanner.classList.add('hidden');
+                if (cookiePlaceholder) cookiePlaceholder.classList.remove('hidden');
+                if (videoContainer) videoContainer.classList.add('hidden');
+            } else {
+                if (cookieBanner) cookieBanner.classList.remove('hidden');
+                if (cookiePlaceholder) cookiePlaceholder.classList.remove('hidden');
+                if (videoContainer) videoContainer.classList.add('hidden');
+            }
+        }
+
+        function acceptCookies() {
+            localStorage.setItem(consentKey, 'accepted');
+            applyConsentState();
+        }
+
+        function rejectCookies() {
+            localStorage.setItem(consentKey, 'rejected');
+            applyConsentState();
+        }
+
+        function showCookieBanner() {
+            if (cookieBanner) {
+                cookieBanner.classList.remove('hidden');
+                cookieBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        if (cookieAccept) cookieAccept.addEventListener('click', acceptCookies);
+        if (cookieReject) cookieReject.addEventListener('click', rejectCookies);
+        if (youtubeAcceptCookies) youtubeAcceptCookies.addEventListener('click', acceptCookies);
+
+        var cookieSettingsLink = document.getElementById('cookie-settings-link');
+        if (cookieSettingsLink) cookieSettingsLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            showCookieBanner();
+        });
+
+        applyConsentState();
     });
 </script>
 

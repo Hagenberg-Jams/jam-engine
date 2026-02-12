@@ -64,7 +64,7 @@
     <!-- Copyright -->
     <div class="bg-gray-900 py-4">
         <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
-            <p>Copyright @php echo date('Y'); @endphp {{ $companyName }} | <a href="/imprint" class="hover:text-white transition-colors">Imprint</a></p>
+            <p>Copyright @php echo date('Y'); @endphp {{ $companyName }} | <a href="/imprint" class="hover:text-white transition-colors">Imprint</a> | <a href="#" id="cookie-settings-link" class="hover:text-white transition-colors">Cookie settings</a></p>
         </div>
     </div>
 </footer>

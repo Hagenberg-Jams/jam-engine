@@ -39,6 +39,8 @@
         @include('hyde::layouts.scripts')
     @endif
 
+    @include('components.cookie-banner')
+
     <!-- Scroll to Top Button -->
     <button id="scroll-top" class="fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg hidden transition-all z-50" aria-label="Back to top">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

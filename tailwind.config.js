@@ -10,6 +10,9 @@ module.exports = {
 
     theme: {
         extend: {
+            zIndex: {
+                'cookie-banner': '9999',
+            },
             typography: {
                 DEFAULT: {
                     css: {
