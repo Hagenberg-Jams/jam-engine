@@ -80,6 +80,9 @@
     <script>if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) { document.documentElement.classList.add('dark'); document.getElementById('meta-color-scheme').setAttribute('content', 'dark');} else { document.documentElement.classList.remove('dark') } </script>
 @endif
 
+{{-- Page-specific head (e.g. LCP preload for homepage) --}}
+@yield('head')
+
 {{-- Add any extra code to include before the closing <head> tag --}}
 @stack('head')
 
