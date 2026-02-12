@@ -10,7 +10,7 @@
     @endif
     @if(Asset::exists('app.js'))
         @php $appJs = '/media/app.js' . (file_exists(base_path('_media/app.js')) ? '?v=' . substr(md5_file(base_path('_media/app.js')), 0, 8) : ''); @endphp
-        <link rel="preload" href="{{ $appJs }}" as="script">
+        <link rel="modulepreload" href="{{ $appJs }}">
     @endif
 @endif
 
