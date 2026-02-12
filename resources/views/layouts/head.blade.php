@@ -2,6 +2,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ $page->title() }}</title>
 
+{{-- Preload critical assets to reduce request chain (discover earlier, fetch in parallel) --}}
+@if(!Vite::running() && !config('hyde.load_app_styles_from_cdn', false))
+    @if(Asset::exists('app.css'))
+        @php $appCss = '/media/app.css' . (file_exists(base_path('_media/app.css')) ? '?v=' . substr(md5_file(base_path('_media/app.css')), 0, 8) : ''); @endphp
+        <link rel="preload" href="{{ $appCss }}" as="style">
+    @endif
+    @if(Asset::exists('app.js'))
+        @php $appJs = '/media/app.js' . (file_exists(base_path('_media/app.js')) ? '?v=' . substr(md5_file(base_path('_media/app.js')), 0, 8) : ''); @endphp
+        <link rel="preload" href="{{ $appJs }}" as="script">
+    @endif
+@endif
+
 {{-- Favicons --}}
 @if (Asset::exists('favicon.ico'))
     <link rel="icon" type="image/x-icon" href="/media/favicon.ico">
