@@ -69,7 +69,9 @@
                     @php
                         // Convert single line breaks to markdown hard breaks (two spaces + newline)
                         // This allows markdown to convert them to <br> while also processing links
-                        $paragraphWithHardBreaks = preg_replace('/([^\n])\n([^\n])/', '$1  \n$2', trim($paragraph));
+                        // Uses lookahead (?=[^\n]) to avoid consuming the next character, so consecutive
+                        // newlines (3+ lines) are all converted, not just the first one.
+                        $paragraphWithHardBreaks = preg_replace('/([^\n])\n(?=[^\n])/', '$1  \n', trim($paragraph));
                         // Process markdown (converts links and hard breaks)
                         $htmlContent = \Illuminate\Support\Str::markdown($paragraphWithHardBreaks);
                         // Remove wrapping <p> tag if markdown added one (we add our own)
