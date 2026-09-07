@@ -273,7 +273,7 @@ class AddGameCommand extends Command
         if (empty($firstLine) || $firstLine === '---END---') {
             return null;
         }
-        $lines[] = $firstLine;
+        $lines[] = is_scalar($firstLine) ? (string) $firstLine : '';
 
         while (true) {
             $line = $this->ask('', '');
@@ -281,7 +281,7 @@ class AddGameCommand extends Command
                 break;
             }
             if (!empty($line)) {
-                $lines[] = $line;
+                $lines[] = is_scalar($line) ? (string) $line : '';
             }
         }
 
@@ -300,7 +300,7 @@ class AddGameCommand extends Command
             if ($line === '---END---') {
                 break;
             }
-            $lines[] = $line;
+            $lines[] = is_scalar($line) ? (string) $line : '';
         }
 
         return implode("\n", $lines);

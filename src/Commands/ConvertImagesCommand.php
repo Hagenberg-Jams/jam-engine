@@ -434,7 +434,7 @@ class ConvertImagesCommand extends Command
         }
 
         // Update about image
-        if (isset($data['about']['image']) && is_string($data['about']['image'])) {
+        if (isset($data['about']) && is_array($data['about']) && isset($data['about']['image']) && is_string($data['about']['image'])) {
             $oldImage = $data['about']['image'];
             $newImage = $this->convertImageFile(null, $oldImage, $targetFormat, $dryRun, '_media');
             if ($newImage && $newImage !== $oldImage) {
@@ -444,7 +444,7 @@ class ConvertImagesCommand extends Command
         }
 
         // Update sponsor logos (only pixel images, skip SVG)
-        if (isset($data['sponsors']['items']) && is_array($data['sponsors']['items'])) {
+        if (isset($data['sponsors']) && is_array($data['sponsors']) && isset($data['sponsors']['items']) && is_array($data['sponsors']['items'])) {
             foreach ($data['sponsors']['items'] as $index => $sponsor) {
                 if (!is_array($sponsor) || !isset($sponsor['logo']) || !is_string($sponsor['logo'])) {
                     continue;

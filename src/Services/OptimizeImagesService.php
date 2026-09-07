@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Hyde\Hyde;
-use Symfony\Component\Yaml\Yaml;
-
 use function exec;
 use function file_exists;
 use function getimagesize;
+
+use Hyde\Hyde;
+
 use function pathinfo;
+
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Optimizes images at build time: generates responsive variants for gallery/hero images.
@@ -67,9 +69,12 @@ class OptimizeImagesService
         // Gallery images from homepage
         $homepagePath = Hyde::path('_data/homepage.yaml');
         if (file_exists($homepagePath)) {
-            $data = Yaml::parseFile($homepagePath) ?? [];
-            if (isset($data['about']['gallery']) && is_array($data['about']['gallery'])) {
-                foreach ($data['about']['gallery'] as $item) {
+            $parsed = Yaml::parseFile($homepagePath);
+            $data = is_array($parsed) ? $parsed : [];
+
+            $about = $data['about'] ?? null;
+            if (is_array($about) && isset($about['gallery']) && is_array($about['gallery'])) {
+                foreach ($about['gallery'] as $item) {
                     $file = is_array($item) ? ($item['image'] ?? '') : $item;
                     if (is_string($file) && $file !== '' && $this->isOptimizableFormat($file)) {
                         $images[] = ltrim($file, '/');
@@ -77,8 +82,9 @@ class OptimizeImagesService
                 }
             }
             // Hero images
-            if (isset($data['hero']['images']) && is_array($data['hero']['images'])) {
-                foreach ($data['hero']['images'] as $file) {
+            $hero = $data['hero'] ?? null;
+            if (is_array($hero) && isset($hero['images']) && is_array($hero['images'])) {
+                foreach ($hero['images'] as $file) {
                     if (is_string($file) && $file !== '' && $this->isOptimizableFormat($file)) {
                         $images[] = ltrim($file, '/');
                     }
@@ -86,7 +92,7 @@ class OptimizeImagesService
             }
         }
 
-        return array_unique(array_filter($images, fn (string $f) => file_exists("{$mediaDir}/{$f}")));
+        return array_unique(array_filter($images, fn(string $f) => file_exists("{$mediaDir}/{$f}")));
     }
 
     private function isOptimizableFormat(string $filename): bool
@@ -137,7 +143,7 @@ class OptimizeImagesService
             str_replace('"', '\\"', $inputPath),
             $maxWidth,
             $quality,
-            str_replace('"', '\\"', $outputPath)
+            str_replace('"', '\\"', $outputPath),
         );
 
         exec($cmd, $output, $returnCode);

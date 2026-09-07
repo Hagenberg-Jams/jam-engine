@@ -172,10 +172,17 @@ class PrintGameSheetsCommand extends Command
         // Prepare platforms
         $platforms = null;
         if (!empty($downloads)) {
-            $platformList = collect($downloads)->pluck('platform')->unique()->values()->toArray();
-            if (!empty($platformList)) {
-                $platforms = implode(', ', $platformList);
+            // Collect distinct platforms in first-seen order, mirroring the previous
+            // pluck()->unique()->values() chain but keeping the list typed as strings.
+            $platformList = [];
+            foreach ($downloads as $download) {
+                $value = is_array($download) ? ($download['platform'] ?? null) : null;
+                $platform = is_scalar($value) ? (string) $value : '';
+                if (!in_array($platform, $platformList, true)) {
+                    $platformList[] = $platform;
+                }
             }
+            $platforms = implode(', ', $platformList);
         }
 
         // Render HTML
