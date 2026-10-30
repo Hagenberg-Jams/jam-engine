@@ -16,11 +16,13 @@ jobs:
           php-version: '8.5'
           extensions: mbstring, dom, fileinfo
           coverage: none
-      - name: Install ImageMagick for the image commands
+      - name: Install ImageMagick 7 for the image commands
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick webp
-          magick -version || echo "::notice::magick is not available, so the jam:add-project test is skipped."
+          curl -fsSL -o magick https://imagemagick.org/archive/binaries/magick
+          chmod +x magick
+          sudo mv magick /usr/local/bin/magick
+          echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
+          APPIMAGE_EXTRACT_AND_RUN=1 magick -version
       - run: composer install --no-interaction --no-progress
       - run: composer lint
       - run: composer analyse
