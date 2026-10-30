@@ -28,32 +28,35 @@ use Symfony\Component\Yaml\Yaml;
 use function unlink;
 
 /**
- * Command to add a new game to a Game Jam year.
+ * Command to add a new project to a jam year.
  *
  * This command:
- * - Interactively asks for all game data
+ * - Interactively asks for all project data
  * - Processes images from _input/header/ and _input/screenshots/
  * - Processes download files from _input/download/
- * - Adds entry to games YAML file
+ * - Adds entry to projects YAML file
  * - Cleans up input directories on success
  */
-class AddGameCommand extends Command
+class AddProjectCommand extends Command
 {
-    protected $signature = 'gamejam:add-game {--year= : Year of the Game Jam}';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:add-game'];
 
-    protected $description = 'Add a new game to a Game Jam year with image processing';
+    protected $signature = 'jam:add-project {--year= : Year of the jam}';
+
+    protected $description = 'Add a new project to a jam year with image processing';
 
     protected string $inputHeaderDir;
     protected string $inputScreenshotsDir;
     protected string $inputDownloadDir;
     protected ?int $year = null;
-    protected string $gameSlug = '';
+    protected string $projectSlug = '';
     /** @var array<string> */
     protected array $processedFiles = [];
 
     public function handle(): int
     {
-        $this->info('Adding a new game...');
+        $this->info('Adding a new project...');
         $this->newLine();
 
         // Setup input directories
@@ -68,9 +71,9 @@ class AddGameCommand extends Command
         }
 
         // Validate YAML file exists
-        $yamlFile = base_path("_data/games/games{$this->year}.yaml");
+        $yamlFile = base_path("_data/projects/{$this->year}.yaml");
         if (!file_exists($yamlFile)) {
-            if (!$this->confirm("Games YAML file for year {$this->year} does not exist. Create it?", true)) {
+            if (!$this->confirm("Projects YAML file for year {$this->year} does not exist. Create it?", true)) {
                 $this->error('Cannot proceed without YAML file.');
                 return 1;
             }
@@ -82,17 +85,17 @@ class AddGameCommand extends Command
             return 1;
         }
 
-        // Collect game data
+        // Collect project data
         $gameData = $this->collectGameData();
         if ($gameData === null) {
             return 1;
         }
 
-        $this->gameSlug = Str::slug($gameData['name']);
+        $this->projectSlug = Str::slug($gameData['name']);
 
-        // Check for duplicate game name
+        // Check for duplicate project name
         if ($this->gameExists($gameData['name'])) {
-            if (!$this->confirm("Game '{$gameData['name']}' already exists. Overwrite?", false)) {
+            if (!$this->confirm("Project '{$gameData['name']}' already exists. Overwrite?", false)) {
                 $this->info('Cancelled.');
                 return 0;
             }
@@ -105,7 +108,9 @@ class AddGameCommand extends Command
         }
 
         // Process downloads
-        $this->processDownloads($gameData);
+        if ($this->hasSection('downloads')) {
+            $this->processDownloads($gameData);
+        }
 
         // Add to YAML
         if (!$this->addToYaml($gameData)) {
@@ -116,10 +121,10 @@ class AddGameCommand extends Command
         $this->cleanupInputDirectories();
 
         $this->newLine();
-        $gameName = is_string($gameData['name'] ?? null) ? $gameData['name'] : 'Unknown';
-        $this->info("Successfully added game '{$gameName}' to {$this->year}!");
+        $projectName = is_string($gameData['name'] ?? null) ? $gameData['name'] : 'Unknown';
+        $this->info("Successfully added project '{$projectName}' to {$this->year}!");
         $this->info("  - Images processed and moved to _media/{$this->year}/");
-        $this->info("  - Game entry added to _data/games/games{$this->year}.yaml");
+        $this->info("  - Project entry added to _data/projects/{$this->year}.yaml");
 
         return 0;
     }
@@ -128,7 +133,7 @@ class AddGameCommand extends Command
     {
         if ($this->option('year')) {
             $year = (int) $this->option('year');
-            $yamlFile = base_path("_data/games/games{$year}.yaml");
+            $yamlFile = base_path("_data/projects/{$year}.yaml");
             if (!file_exists($yamlFile)) {
                 $this->warn("YAML file for year {$year} does not exist.");
             }
@@ -146,7 +151,7 @@ class AddGameCommand extends Command
         }
 
         if (empty($years)) {
-            $this->error('No Game Jam years found. Create one first with: php hyde gamejam:create-jam');
+            $this->error('No jam years found. Create one first with: php hyde jam:create-jam');
             return null;
         }
 
@@ -163,6 +168,11 @@ class AddGameCommand extends Command
         $headerFiles = $this->getImageFiles($this->inputHeaderDir);
         $screenshotFiles = $this->getImageFiles($this->inputScreenshotsDir);
 
+        if ($this->hasSection('video') && $headerFiles === [] && $screenshotFiles === []) {
+            $this->error('Please place at least a header image in _input/header/, it is used as the preview of the video.');
+            return false;
+        }
+
         if (empty($headerFiles)) {
             $this->error("No header image found in {$this->inputHeaderDir}");
             $this->error('Please place the header image in _input/header/');
@@ -173,7 +183,12 @@ class AddGameCommand extends Command
             $this->warn("Multiple header images found. Using first: " . basename($headerFiles[0]));
         }
 
-        if (empty($screenshotFiles)) {
+        if (empty($screenshotFiles) && !$this->hasSection('gallery')) {
+            $this->info("Found header image: " . basename($headerFiles[0]));
+            return true;
+        }
+
+        if (empty($screenshotFiles) && !$this->hasSection('video')) {
             $this->error("No screenshot images found in {$this->inputScreenshotsDir}");
             $this->error('Please place screenshot images in _input/screenshots/');
             return false;
@@ -202,22 +217,32 @@ class AddGameCommand extends Command
     }
 
     /**
-     * @return array{name: string, players: string, controls: array<string>, description: string, teamName: string, teamMembers: array<string>, winner: string}|null
+     * @return array{name: string, players: string|null, controls: array<string>|null, controlsText: string|null, videos: array<int, array{youtube: string}>, description: string, teamName: string, teamMembers: array<string>, winner: string}|null
      */
     protected function collectGameData(): ?array
     {
-        $nameInput = $this->ask('Game name');
+        $nameInput = $this->ask('Project name');
         $name = is_string($nameInput) ? $nameInput : '';
         if (empty($name)) {
-            $this->error('Game name is required');
+            $this->error('Project name is required');
             return null;
         }
 
-        $playersInput = $this->ask('Number of players (e.g., "1", "2-4", "3-8")', '1');
-        $players = $this->parsePlayersInput(is_string($playersInput) ? $playersInput : '1');
+        $players = null;
+        $controls = null;
+        $controlsText = null;
 
-        $controls = $this->askForControls();
-        $controlsText = $this->askForControlsText();
+        if ($this->hasSection('info')) {
+            $playersInput = $this->ask('Number of players (e.g., "1", "2-4", "3-8")', '1');
+            $players = $this->parsePlayersInput(is_string($playersInput) ? $playersInput : '1');
+            $controls = $this->askForControls();
+        }
+
+        if ($this->hasSection('controls')) {
+            $controlsText = $this->askForControlsText();
+        }
+
+        $videos = $this->hasSection('video') ? $this->askForVideos() : [];
         $description = $this->askForDescription();
         $teamNameInput = $this->ask('Team name');
         $teamName = is_string($teamNameInput) ? $teamNameInput : '';
@@ -229,11 +254,49 @@ class AddGameCommand extends Command
             'players' => $players,
             'controls' => $controls,
             'controlsText' => $controlsText,
+            'videos' => $videos,
             'description' => $description,
             'teamName' => $teamName,
             'teamMembers' => $teamMembers,
             'winner' => $winner,
         ];
+    }
+
+    protected function hasSection(string $section): bool
+    {
+        $sections = config('jam.project.sections', []);
+
+        return is_array($sections) && in_array($section, $sections, true);
+    }
+
+    /**
+     * @return array<int, array{youtube: string}>
+     */
+    protected function askForVideos(): array
+    {
+        $videos = [];
+
+        while (true) {
+            $input = $this->ask('YouTube link or ID (leave empty when finished)');
+            $id = is_string($input) ? $this->parseYoutubeId($input) : '';
+
+            if ($id === '') {
+                return $videos;
+            }
+
+            $videos[] = ['youtube' => $id];
+        }
+    }
+
+    protected function parseYoutubeId(string $input): string
+    {
+        $input = trim($input);
+
+        if (preg_match('#(?:youtu\.be/|[?&]v=|/embed/|/shorts/)([\w-]{6,20})#', $input, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $input;
     }
 
     /**
@@ -291,7 +354,7 @@ class AddGameCommand extends Command
 
     protected function askForDescription(): string
     {
-        $this->info('Enter game description (multiline). Type "---END---" on a new line when finished:');
+        $this->info('Enter project description (multiline). Type "---END---" on a new line when finished:');
         $this->newLine();
 
         $lines = [];
@@ -408,7 +471,7 @@ class AddGameCommand extends Command
 
     protected function askForWinner(): string
     {
-        $isWinner = $this->confirm('Is this a winning game?', false);
+        $isWinner = $this->confirm('Is this a winning project?', false);
 
         if (!$isWinner) {
             return 'no';
@@ -437,7 +500,7 @@ class AddGameCommand extends Command
         // Process header image (1920x520)
         $headerFiles = $this->getImageFiles($this->inputHeaderDir);
         $headerFile = $headerFiles[0];
-        $headerOutput = "{$this->gameSlug}_header.webp";
+        $headerOutput = "{$this->projectSlug}_header.webp";
         $headerPath = "{$mediaDir}/{$headerOutput}";
 
         if (!$this->processHeaderImage($headerFile, $headerPath)) {
@@ -453,8 +516,8 @@ class AddGameCommand extends Command
         $images = [];
         foreach ($screenshotFiles as $index => $screenshotFile) {
             $imageNum = $index + 1;
-            $fullOutput = "{$this->gameSlug}_image{$imageNum}_full.webp";
-            $thumbOutput = "{$this->gameSlug}_image{$imageNum}_thumb.webp";
+            $fullOutput = "{$this->projectSlug}_image{$imageNum}_full.webp";
+            $thumbOutput = "{$this->projectSlug}_image{$imageNum}_thumb.webp";
             $fullPath = "{$mediaDir}/{$fullOutput}";
             $thumbPath = "{$mediaDir}/{$thumbOutput}";
 
@@ -652,9 +715,9 @@ class AddGameCommand extends Command
         $this->newLine();
 
         $downloads = [];
-        $gamesDir = base_path("games/{$this->year}");
-        if (!is_dir($gamesDir)) {
-            mkdir($gamesDir, 0755, true);
+        $downloadsDir = base_path("games/{$this->year}");
+        if (!is_dir($downloadsDir)) {
+            mkdir($downloadsDir, 0755, true);
         }
 
         // Platform options for selection
@@ -681,8 +744,8 @@ class AddGameCommand extends Command
 
             // Generate new filename: {slug}-{Platform}.zip
             $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
-            $newFileName = "{$this->gameSlug}-{$platform}.{$extension}";
-            $targetPath = "{$gamesDir}/{$newFileName}";
+            $newFileName = "{$this->projectSlug}-{$platform}.{$extension}";
+            $targetPath = "{$downloadsDir}/{$newFileName}";
 
             // Check if target file already exists
             if (file_exists($targetPath)) {
@@ -692,7 +755,7 @@ class AddGameCommand extends Command
                 }
             }
 
-            // Copy file to games directory with new name
+            // Copy file to projects directory with new name
             if (!copy($downloadFile, $targetPath)) {
                 $this->warn("Failed to copy download file: {$originalFileName}");
                 continue;
@@ -723,9 +786,9 @@ class AddGameCommand extends Command
         }
     }
 
-    protected function gameExists(string $gameName): bool
+    protected function gameExists(string $projectName): bool
     {
-        $yamlFile = base_path("_data/games/games{$this->year}.yaml");
+        $yamlFile = base_path("_data/projects/{$this->year}.yaml");
         $data = Yaml::parseFile($yamlFile) ?? [];
 
         if (!is_array($data)) {
@@ -733,10 +796,10 @@ class AddGameCommand extends Command
         }
 
         foreach ($data as $entry) {
-            if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+            if (!is_array($entry) || !isset($entry['project']) || !is_array($entry['project'])) {
                 continue;
             }
-            if (isset($entry['game']['name']) && is_string($entry['game']['name']) && $entry['game']['name'] === $gameName) {
+            if (isset($entry['project']['name']) && is_string($entry['project']['name']) && $entry['project']['name'] === $projectName) {
                 return true;
             }
         }
@@ -744,23 +807,23 @@ class AddGameCommand extends Command
         return false;
     }
 
-    protected function removeExistingGame(string $gameName): void
+    protected function removeExistingGame(string $projectName): void
     {
-        $yamlFile = base_path("_data/games/games{$this->year}.yaml");
+        $yamlFile = base_path("_data/projects/{$this->year}.yaml");
         $data = Yaml::parseFile($yamlFile) ?? [];
 
         if (!is_array($data)) {
             return;
         }
 
-        $data = array_filter($data, function (mixed $entry) use ($gameName): bool {
-            if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+        $data = array_filter($data, function (mixed $entry) use ($projectName): bool {
+            if (!is_array($entry) || !isset($entry['project']) || !is_array($entry['project'])) {
                 return true;
             }
-            if (!isset($entry['game']['name']) || !is_string($entry['game']['name'])) {
+            if (!isset($entry['project']['name']) || !is_string($entry['project']['name'])) {
                 return true;
             }
-            return $entry['game']['name'] !== $gameName;
+            return $entry['project']['name'] !== $projectName;
         });
 
         $yamlContent = Yaml::dump(array_values($data), 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
@@ -772,7 +835,7 @@ class AddGameCommand extends Command
      */
     protected function addToYaml(array $gameData): bool
     {
-        $yamlFile = base_path("_data/games/games{$this->year}.yaml");
+        $yamlFile = base_path("_data/projects/{$this->year}.yaml");
         $data = Yaml::parseFile($yamlFile) ?? [];
 
         if (!is_array($data)) {
@@ -781,13 +844,14 @@ class AddGameCommand extends Command
 
         // Build YAML entry
         $entry = [
-            'game' => [
+            'project' => array_filter([
                 'name' => $gameData['name'],
-                'players' => $gameData['players'],
-                'controls' => $gameData['controls'],
+                'players' => $gameData['players'] ?? null,
+                'controls' => $gameData['controls'] ?? null,
                 'controls_text' => $gameData['controlsText'] ?? null,
+                'videos' => ($gameData['videos'] ?? []) ?: null,
                 'description' => $gameData['description'],
-            ],
+            ], fn(mixed $value): bool => $value !== null),
             'team' => [
                 'name' => $gameData['teamName'],
                 'members' => $gameData['teamMembers'],
@@ -804,10 +868,10 @@ class AddGameCommand extends Command
         // Add new entry
         $data[] = $entry;
 
-        // Sort all entries alphabetically by game name (case-insensitive)
+        // Sort all entries alphabetically by project name (case-insensitive)
         usort($data, function (mixed $a, mixed $b): int {
-            $nameA = (is_array($a) && isset($a['game']) && is_array($a['game']) && isset($a['game']['name'])) ? (is_string($a['game']['name']) ? $a['game']['name'] : '') : '';
-            $nameB = (is_array($b) && isset($b['game']) && is_array($b['game']) && isset($b['game']['name'])) ? (is_string($b['game']['name']) ? $b['game']['name'] : '') : '';
+            $nameA = (is_array($a) && isset($a['project']) && is_array($a['project']) && isset($a['project']['name'])) ? (is_string($a['project']['name']) ? $a['project']['name'] : '') : '';
+            $nameB = (is_array($b) && isset($b['project']) && is_array($b['project']) && isset($b['project']['name'])) ? (is_string($b['project']['name']) ? $b['project']['name'] : '') : '';
             return strcasecmp($nameA, $nameB);
         });
 
@@ -825,8 +889,8 @@ class AddGameCommand extends Command
             mkdir($dir, 0755, true);
         }
 
-        $content = "# Games for {$this->year} Game Jam\n";
-        $content .= "# Add game entries below using: php hyde gamejam:add-game\n";
+        $content = "# Projects for {$this->year} jam\n";
+        $content .= "# Add project entries below using: php hyde jam:add-project\n";
         $content .= "\n";
 
         file_put_contents($file, $content);

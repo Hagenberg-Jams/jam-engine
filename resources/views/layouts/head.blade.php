@@ -45,15 +45,15 @@
     // Collect context variables for OG meta tags
     $ogContext = [
         'year' => $year ?? null,
-        'gameName' => $gameName ?? null,
+        'projectName' => $projectName ?? null,
         'description' => $description ?? null,
         'headerImage' => $headerImage ?? null,
         'personName' => $personName ?? null,
-        'totalGames' => $totalGames ?? 0,
+        'totalProjects' => $totalProjects ?? 0,
         'years' => $years ?? [],
         'persons' => $persons ?? null,
         'jam' => $jam ?? null,
-        'games' => $games ?? null,
+        'projects' => $projects ?? null,
     ];
     
     $ogMeta = (new \HagenbergJams\JamEngine\Helpers\OpenGraphMeta())->getMetaTags($ogContext);
@@ -71,7 +71,7 @@
 <meta property="og:description" content="{{ $ogMeta['description'] }}">
 <meta property="og:image" content="{{ $ogMeta['image'] }}">
 <meta property="og:url" content="{{ $ogMeta['url'] }}">
-<meta property="og:site_name" content="{{ $ogMeta['site_name'] ?? 'Hagenberg Game Jam' }}">
+<meta property="og:site_name" content="{{ $ogMeta['site_name'] ?? config('hyde.name') }}">
 
 {{-- Twitter Card Tags --}}
 <meta name="twitter:card" content="summary_large_image">

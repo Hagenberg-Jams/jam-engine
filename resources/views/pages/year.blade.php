@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    @include('components.gamejam-content', [
+    @include('components.year-content', [
         'year' => $year,
         'jam' => $jam,
-        'games' => $games,
+        'projects' => $projects,
     ])
 @endsection
 

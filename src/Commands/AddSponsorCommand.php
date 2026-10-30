@@ -36,7 +36,10 @@ use Symfony\Component\Yaml\Yaml;
  */
 class AddSponsorCommand extends Command
 {
-    protected $signature = 'gamejam:add-sponsor';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:add-sponsor'];
+
+    protected $signature = 'jam:add-sponsor';
 
     protected $description = 'Add a new sponsor with logo processing';
 
@@ -286,7 +289,7 @@ class AddSponsorCommand extends Command
         if (!isset($data['sponsors']) || !is_array($data['sponsors'])) {
             $data['sponsors'] = [
                 'title' => 'Our Sponsors',
-                'description' => "Hagenberg Game Jam wouldn't be possible without the support of our partners.",
+                'description' => "Hagenberg jam wouldn't be possible without the support of our partners.",
                 'items' => [],
             ];
         }

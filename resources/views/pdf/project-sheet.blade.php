@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $gameName }} - {{ $year }}</title>
+    <title>{{ $projectName }} - {{ $year }}</title>
     <style>
         @page {
             size: A4;
@@ -149,24 +149,24 @@
 </head>
 <body>
     @php
-        $logoPath = base_path('_media/hagenberg_game_jam_logo_black.svg');
+        $logoPath = base_path('_media/' . config('jam.branding.logo_dark'));
     @endphp
     @if(file_exists($logoPath))
         <div style="text-align: center; margin-bottom: 15px;">
-            <img src="{{ $logoPath }}" alt="Hagenberg Game Jam" style="max-height: 40px; width: auto;">
+            <img src="{{ $logoPath }}" alt="{{ config('hyde.name') }}" style="max-height: 40px; width: auto;">
         </div>
     @endif
     
     <div class="header">
-        <div class="title">{{ $gameName }}</div>
-        <div class="year">Hagenberg Game Jam {{ $year }}</div>
+        <div class="title">{{ $projectName }}</div>
+        <div class="year">{{ config('hyde.name') }} {{ $year }}</div>
         @if(!empty($teamName))
             <div class="team-name">{{ $teamName }}</div>
         @endif
     </div>
 
     @if(!empty($headerImagePath) && file_exists($headerImagePath))
-        <img src="{{ $headerImagePath }}" alt="{{ $gameName }}" class="header-image">
+        <img src="{{ $headerImagePath }}" alt="{{ $projectName }}" class="header-image">
     @endif
 
     <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
@@ -205,7 +205,7 @@
 
     @if(!empty($description))
         <div class="section">
-            <div class="section-title">About the Game</div>
+            <div class="section-title">{{ config('jam.labels.about_project') }}</div>
             <div class="description">
                 @php
                     // Split by double line breaks (paragraphs)
@@ -253,7 +253,7 @@
     @endif
 
     <div class="footer">
-        Generated for Hagenberg Game Jam {{ $year }} | hagenberg-gamejam.at
+        Generated for {{ config('hyde.name') }} {{ $year }} | {{ preg_replace('#^https?://#', '', (string) config('jam.website')) }}
     </div>
 </body>
 </html>

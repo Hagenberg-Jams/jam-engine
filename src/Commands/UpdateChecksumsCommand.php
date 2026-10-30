@@ -18,27 +18,30 @@ use function preg_match;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Command to calculate and update SHA256 checksums for game download files in YAML data files.
+ * Command to calculate and update SHA256 checksums for project download files in YAML data files.
  *
- * Run this command after adding or updating game ZIP files to update the checksums in the YAML files.
+ * Run this command after adding or updating project ZIP files to update the checksums in the YAML files.
  * This allows the build task to skip copying unchanged files by comparing checksums.
  */
-class UpdateGameChecksumsCommand extends Command
+class UpdateChecksumsCommand extends Command
 {
-    protected $signature = 'gamejam:update-checksums {--year= : Only update checksums for a specific year}';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:update-checksums'];
 
-    protected $description = 'Calculate and update SHA256 checksums for game download files in YAML data files';
+    protected $signature = 'jam:update-checksums {--year= : Only update checksums for a specific year}';
+
+    protected $description = 'Calculate and update SHA256 checksums for project download files in YAML data files';
 
     public function handle(): int
     {
         $years = $this->getYears();
 
         if (empty($years)) {
-            $this->error('No game data files found');
+            $this->error('No project data files found');
             return 1;
         }
 
-        $this->info('Updating checksums for game download files...');
+        $this->info('Updating checksums for project download files...');
         $this->newLine();
 
         $totalUpdated = 0;
@@ -70,19 +73,19 @@ class UpdateGameChecksumsCommand extends Command
     {
         if ($this->option('year')) {
             $year = (int) $this->option('year');
-            $yamlFile = base_path("_data/games/games{$year}.yaml");
+            $yamlFile = base_path("_data/projects/{$year}.yaml");
             if (file_exists($yamlFile)) {
                 return [$year];
             }
-            $this->error("No game data file found for year {$year}");
+            $this->error("No project data file found for year {$year}");
             return [];
         }
 
-        $files = glob(base_path('_data/games/games*.yaml')) ?: [];
+        $files = glob(base_path('_data/projects/*.yaml')) ?: [];
         $years = [];
 
         foreach ($files as $file) {
-            if (preg_match('/games(\d{4})\.yaml$/', $file, $matches)) {
+            if (preg_match('/(\d{4})\.yaml$/', $file, $matches)) {
                 $years[] = (int) $matches[1];
             }
         }
@@ -93,7 +96,7 @@ class UpdateGameChecksumsCommand extends Command
 
     protected function updateChecksumsForYear(int $year): int
     {
-        $yamlFile = base_path("_data/games/games{$year}.yaml");
+        $yamlFile = base_path("_data/projects/{$year}.yaml");
 
         if (!file_exists($yamlFile)) {
             return 0;
@@ -106,12 +109,12 @@ class UpdateGameChecksumsCommand extends Command
         }
 
         $updated = 0;
-        $gamesDir = base_path("games/{$year}");
+        $downloadsDir = base_path("games/{$year}");
 
         $hasChanges = false;
 
         foreach ($data as $index => $entry) {
-            if (!is_array($entry) || !isset($entry['game']) || !isset($entry['download'])) {
+            if (!is_array($entry) || !isset($entry['project']) || !isset($entry['download'])) {
                 continue;
             }
 
@@ -135,7 +138,7 @@ class UpdateGameChecksumsCommand extends Command
                     continue;
                 }
 
-                $filePath = $gamesDir . '/' . $fileName;
+                $filePath = $downloadsDir . '/' . $fileName;
 
                 if (!file_exists($filePath)) {
                     continue;

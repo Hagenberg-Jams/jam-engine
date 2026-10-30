@@ -24,10 +24,10 @@ use function str_replace;
 use function str_starts_with;
 
 /**
- * Command to synchronize game files between local games/ directory and Cloudflare R2 bucket.
+ * Command to synchronize project files between local games/ directory and Cloudflare R2 bucket.
  *
  * Supports:
- * - Upload: local → R2 (e.g. after add-game)
+ * - Upload: local → R2 (e.g. after add-project)
  * - Download: R2 → local (e.g. for new dev setup)
  * - Sync: bidirectional (R2 is master, local gets missing files, local uploads new/changed)
  *
@@ -35,15 +35,18 @@ use function str_starts_with;
  */
 class SyncR2Command extends Command
 {
-    protected $signature = 'gamejam:sync-r2 
-                            {--upload : Upload local games to R2}
-                            {--download : Download games from R2 to local}
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:sync-r2'];
+
+    protected $signature = 'jam:sync-r2 
+                            {--upload : Upload local projects to R2}
+                            {--download : Download projects from R2 to local}
                             {--sync : Bidirectional sync (R2 is master)}
-                            {--year= : Only sync games for a specific year}
+                            {--year= : Only sync projects for a specific year}
                             {--dry-run : Show what would be done without making changes}
                             {--force : Skip confirmation prompts (use with caution)}';
 
-    protected $description = 'Synchronize game files between local games/ directory and Cloudflare R2 bucket';
+    protected $description = 'Synchronize project files between local games/ directory and Cloudflare R2 bucket';
 
     protected ?S3Client $s3Client = null;
     protected string $localGamesDir;
@@ -71,9 +74,9 @@ class SyncR2Command extends Command
         if (!$upload && !$download && !$sync) {
             $this->error('Please specify --upload, --download, or --sync');
             $this->info('Examples:');
-            $this->line('  php hyde gamejam:sync-r2 --upload --year=2025');
-            $this->line('  php hyde gamejam:sync-r2 --download');
-            $this->line('  php hyde gamejam:sync-r2 --sync');
+            $this->line('  php hyde jam:sync-r2 --upload --year=2025');
+            $this->line('  php hyde jam:sync-r2 --download');
+            $this->line('  php hyde jam:sync-r2 --sync');
             return 1;
         }
 
@@ -168,12 +171,12 @@ class SyncR2Command extends Command
 
     protected function handleUpload(bool $dryRun): int
     {
-        $this->info('Uploading local games to R2...');
+        $this->info('Uploading local projects to R2...');
         $this->newLine();
 
         $localFiles = $this->getLocalFiles();
         if (empty($localFiles)) {
-            $this->warn('No local game files found');
+            $this->warn('No local project files found');
             return 0;
         }
 
@@ -242,12 +245,12 @@ class SyncR2Command extends Command
 
     protected function handleDownload(bool $dryRun): int
     {
-        $this->info('Downloading games from R2...');
+        $this->info('Downloading projects from R2...');
         $this->newLine();
 
         $remoteFiles = $this->getRemoteFiles();
         if (empty($remoteFiles)) {
-            $this->warn('No game files found in R2 bucket');
+            $this->warn('No project files found in R2 bucket');
             return 0;
         }
 
@@ -323,7 +326,7 @@ class SyncR2Command extends Command
 
     protected function handleSync(bool $dryRun): int
     {
-        $this->info('Synchronizing games (R2 is master)...');
+        $this->info('Synchronizing projects (R2 is master)...');
         $this->newLine();
 
         // Step 1: Download missing/changed files from R2
@@ -379,7 +382,7 @@ class SyncR2Command extends Command
     }
 
     /**
-     * Get all local game files (optionally filtered by year).
+     * Get all local project files (optionally filtered by year).
      *
      * @return array<string>
      */
@@ -424,12 +427,12 @@ class SyncR2Command extends Command
     }
 
     /**
-     * Get all remote game files from R2 (optionally filtered by year).
+     * Get all remote project files from R2 (optionally filtered by year).
      *
      * @return array<string>
      */
     /**
-     * Get all remote game files from R2 (optionally filtered by year).
+     * Get all remote project files from R2 (optionally filtered by year).
      *
      * @return array<string>
      */

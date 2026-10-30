@@ -34,7 +34,10 @@ use function unlink;
  */
 class ConvertImagesCommand extends Command
 {
-    protected $signature = 'gamejam:convert-images 
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:convert-images'];
+
+    protected $signature = 'jam:convert-images 
                             {--format=webp : Target image format (webp, jpg, png, etc.)}
                             {--year= : Only convert images for a specific year}
                             {--dry-run : Show what would be converted without actually converting}';
@@ -79,12 +82,12 @@ class ConvertImagesCommand extends Command
         $this->info("Converting images to {$targetFormat} format...");
         $this->info(str_repeat("=", 80));
 
-        // STEP 1: Process all games YAML files (years)
-        $yamlFiles = glob('_data/games/games*.yaml') ?: [];
+        // STEP 1: Process all projects YAML files (years)
+        $yamlFiles = glob('_data/projects/*.yaml') ?: [];
 
         foreach ($yamlFiles as $yamlFile) {
             // Extract year from filename
-            preg_match('/games(\d{4})\.yaml/', $yamlFile, $matches);
+            preg_match('/(\d{4})\.yaml/', $yamlFile, $matches);
             $year = $matches[1] ?? null;
 
             if (!$year) {
@@ -107,10 +110,10 @@ class ConvertImagesCommand extends Command
             $modified = false;
 
             foreach ($data as $index => $entry) {
-                if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+                if (!is_array($entry) || !isset($entry['project']) || !is_array($entry['project'])) {
                     continue;
                 }
-                $gameName = is_string($entry['game']['name'] ?? null) ? $entry['game']['name'] : 'Unknown';
+                $projectName = is_string($entry['project']['name'] ?? null) ? $entry['project']['name'] : 'Unknown';
 
                 // Process headerimage
                 if (isset($entry['headerimage']) && is_string($entry['headerimage'])) {
@@ -121,9 +124,9 @@ class ConvertImagesCommand extends Command
                         $data[$index]['headerimage'] = $newHeader;
                         $modified = true;
                         if ($dryRun) {
-                            $this->line("  [DRY RUN] {$gameName}: Header would be converted");
+                            $this->line("  [DRY RUN] {$projectName}: Header would be converted");
                         } else {
-                            $this->line("  ✓ {$gameName}: Header converted");
+                            $this->line("  ✓ {$projectName}: Header converted");
                         }
                     }
                 }
@@ -171,9 +174,9 @@ class ConvertImagesCommand extends Command
                         }
                         if (count($summary) > 0) {
                             if ($dryRun) {
-                                $this->line("  [DRY RUN] {$gameName}: " . implode(', ', $summary) . " would be converted");
+                                $this->line("  [DRY RUN] {$projectName}: " . implode(', ', $summary) . " would be converted");
                             } else {
-                                $this->line("  ✓ {$gameName}: " . implode(', ', $summary) . " converted");
+                                $this->line("  ✓ {$projectName}: " . implode(', ', $summary) . " converted");
                             }
                         }
                     }
@@ -478,14 +481,14 @@ class ConvertImagesCommand extends Command
 
     protected function processAllYamlFiles(string $targetFormat, bool $dryRun): void
     {
-        // Find all YAML files in _data/ directory (excluding games subdirectory which is already processed)
+        // Find all YAML files in _data/ directory (excluding projects subdirectory which is already processed)
         $yamlFiles1 = glob('_data/*.yaml') ?: [];
         $yamlFiles2 = glob('_data/*.yml') ?: [];
         $yamlFiles = array_merge($yamlFiles1, $yamlFiles2);
 
         foreach ($yamlFiles as $yamlFile) {
-            // Skip games files (already processed)
-            if (strpos($yamlFile, '_data/games/') !== false) {
+            // Skip projects files (already processed)
+            if (strpos($yamlFile, '_data/projects/') !== false) {
                 continue;
             }
 

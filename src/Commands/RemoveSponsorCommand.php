@@ -28,7 +28,10 @@ use function unlink;
  */
 class RemoveSponsorCommand extends Command
 {
-    protected $signature = 'gamejam:remove-sponsor';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:remove-sponsor'];
+
+    protected $signature = 'jam:remove-sponsor';
 
     protected $description = 'Remove a sponsor from the homepage';
 

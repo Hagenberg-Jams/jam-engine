@@ -8,7 +8,7 @@ use function copy;
 use function file_exists;
 use function glob;
 
-use HagenbergJams\JamEngine\GameJamData;
+use HagenbergJams\JamEngine\JamData;
 
 use function hash_file;
 
@@ -34,7 +34,7 @@ class CopyGamesBuildTask extends PostBuildTask
 {
     use InteractsWithDirectories;
 
-    protected static string $message = 'Copying game downloads';
+    protected static string $message = 'Copying downloads';
 
     protected int $copiedCount = 0;
     protected int $skippedCount = 0;
@@ -44,9 +44,14 @@ class CopyGamesBuildTask extends PostBuildTask
 
     public function handle(): void
     {
-        $gamesBaseUrl = config('gamejam.games_base_url');
+        if (!config('jam.features.downloads')) {
+            $this->skip('Downloads are disabled');
+            return;
+        }
+
+        $gamesBaseUrl = config('jam.downloads.base_url');
         if (!empty($gamesBaseUrl)) {
-            $this->skip('Game downloads served from external URL (GAMES_BASE_URL), skipping copy');
+            $this->skip('Downloads served from external URL (GAMES_BASE_URL), skipping copy');
             return;
         }
 
@@ -66,7 +71,7 @@ class CopyGamesBuildTask extends PostBuildTask
         $files = $this->collectFiles($sourceDir, $targetDir);
 
         if (empty($files)) {
-            $this->skip('No game files to copy');
+            $this->skip('No files to copy');
             return;
         }
 
@@ -84,18 +89,18 @@ class CopyGamesBuildTask extends PostBuildTask
      */
     protected function loadChecksumsFromYaml(): void
     {
-        $yamlFiles = glob(base_path('_data/games/games*.yaml')) ?: [];
+        $yamlFiles = glob(base_path('_data/projects/*.yaml')) ?: [];
 
         foreach ($yamlFiles as $yamlFile) {
-            if (preg_match('/games(\d{4})\.yaml$/', $yamlFile, $matches)) {
+            if (preg_match('/(\d{4})\.yaml$/', $yamlFile, $matches)) {
                 $year = (int) $matches[1];
-                $games = GameJamData::getGames($year);
+                $projects = JamData::getProjects($year);
 
-                if ($games === []) {
+                if ($projects === []) {
                     continue;
                 }
 
-                foreach ($games as $entry) {
+                foreach ($projects as $entry) {
                     if (!isset($entry['download']) || !is_array($entry['download'])) {
                         continue;
                     }

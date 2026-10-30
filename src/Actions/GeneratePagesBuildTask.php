@@ -8,9 +8,10 @@ use function array_filter;
 use function array_map;
 use function glob;
 
-use HagenbergJams\JamEngine\GameJamData;
+use HagenbergJams\JamEngine\JamData;
 use Hyde\Framework\Features\BuildTasks\PreBuildTask;
 use Hyde\Hyde;
+use Hyde\Pages\BladePage;
 use Hyde\Pages\InMemoryPage;
 use Hyde\Support\Models\Route;
 use Illuminate\Support\Str;
@@ -21,18 +22,20 @@ use function preg_match;
 use function sort;
 
 /**
- * Pre-build task to generate Game Jam year pages and game detail pages from data files.
+ * Pre-build task to generate the jam year pages and project detail pages from data files.
  *
  * This makes `php hyde build` behave like the old Jekyll generator:
  * - For every `_data/jams/{year}.yaml`, register an InMemoryPage with identifier `{year}`
- * - For every game in `_data/games/games{year}.yaml`, register an InMemoryPage with identifier `{year}/{slug}`
+ * - For every project in `_data/projects/{year}.yaml`, register an InMemoryPage with identifier `{year}/{slug}`
  */
-class GenerateGameJamPagesBuildTask extends PreBuildTask
+class GeneratePagesBuildTask extends PreBuildTask
 {
-    protected static string $message = 'Generating Game Jam pages from data files';
+    protected static string $message = 'Generating jam pages from data files';
 
     public function handle(): void
     {
+        $this->registerStaticPages();
+
         $years = $this->discoverYears();
 
         if ($years === []) {
@@ -45,8 +48,35 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
         }
 
         // Generate person pages and people overview page
-        $this->registerPeopleOverviewPage($years);
-        $this->registerPersonPages($years);
+        if (config('jam.features.people')) {
+            $this->registerPeopleOverviewPage($years);
+            $this->registerPersonPages($years);
+        }
+    }
+
+    /**
+     * Registers the home, rules, imprint and 404 pages. A site can replace one with a file in _pages/.
+     *
+     * These are real Blade pages, so the sitemap treats them like pages from _pages/.
+     */
+    protected function registerStaticPages(): void
+    {
+        $pages = ['index', 'imprint', '404'];
+
+        if (config('jam.features.rules') && JamData::getRules() !== []) {
+            $pages[] = 'rules';
+        }
+
+        foreach ($pages as $identifier) {
+            if (file_exists(base_path("_pages/{$identifier}.blade.php"))) {
+                continue;
+            }
+
+            $page = new BladePage($identifier);
+
+            Hyde::pages()->addPage($page);
+            Hyde::routes()->addRoute(new Route($page));
+        }
     }
 
     /** @return array<int> */
@@ -72,9 +102,9 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
     {
         $page = InMemoryPage::make((string) $year, [
             'year' => $year,
-            'jam' => GameJamData::getJam($year),
-            'games' => GameJamData::getGames($year),
-        ], '', 'pages.gamejam');
+            'jam' => JamData::getJam($year),
+            'projects' => JamData::getProjects($year),
+        ], '', 'pages.year');
 
         Hyde::pages()->addPage($page);
         Hyde::routes()->addRoute(new Route($page));
@@ -82,22 +112,22 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
     protected function registerGamePages(int $year): void
     {
-        $games = GameJamData::getGames($year);
-        if ($games === []) {
+        $projects = JamData::getProjects($year);
+        if ($projects === []) {
             return;
         }
 
-        foreach ($games as $entry) {
-            if (!isset($entry['game']) || !is_array($entry['game'])) {
+        foreach ($projects as $entry) {
+            if (!isset($entry['project']) || !is_array($entry['project'])) {
                 continue;
             }
 
-            $game = $entry['game'];
-            if (!isset($game['name']) || !is_string($game['name'])) {
+            $project = $entry['project'];
+            if (!isset($project['name']) || !is_string($project['name'])) {
                 continue;
             }
 
-            $name = $game['name'];
+            $name = $project['name'];
             if ($name === '') {
                 continue;
             }
@@ -111,10 +141,10 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
             $page = InMemoryPage::make($identifier, [
                 'year' => $year,
-                'gameSlug' => $slug,
-                'jam' => GameJamData::getJam($year),
-                'games' => $games, // pass full list; view will pick by slug
-            ], '', 'pages.game');
+                'projectSlug' => $slug,
+                'jam' => JamData::getJam($year),
+                'projects' => $projects, // pass full list; view will pick by slug
+            ], '', 'pages.project');
 
             Hyde::pages()->addPage($page);
             Hyde::routes()->addRoute(new Route($page));
@@ -128,17 +158,17 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
      */
     protected function registerPeopleOverviewPage(array $years): void
     {
-        /** @var array<string, array{name: string, slug: string, totalGames: int, years: array<int>}> */
+        /** @var array<string, array{name: string, slug: string, totalProjects: int, years: array<int>}> */
         $persons = [];
 
-        // Collect all persons from all games
+        // Collect all persons from all projects
         foreach ($years as $year) {
-            $games = GameJamData::getGames($year);
-            if ($games === []) {
+            $projects = JamData::getProjects($year);
+            if ($projects === []) {
                 continue;
             }
 
-            foreach ($games as $entry) {
+            foreach ($projects as $entry) {
                 if (!isset($entry['team']) || !is_array($entry['team'])) {
                     continue;
                 }
@@ -167,12 +197,12 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
                         $persons[$normalizedName] = [
                             'name' => $normalizedName,
                             'slug' => $slug,
-                            'totalGames' => 0,
+                            'totalProjects' => 0,
                             'years' => [],
                         ];
                     }
 
-                    $persons[$normalizedName]['totalGames']++;
+                    $persons[$normalizedName]['totalProjects']++;
                     if (!in_array($year, $persons[$normalizedName]['years'], true)) {
                         $persons[$normalizedName]['years'][] = $year;
                     }
@@ -195,42 +225,42 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
     }
 
     /**
-     * Collect all persons from all games and register person pages.
+     * Collect all persons from all projects and register person pages.
      *
      * @param array<int> $years
      */
     protected function registerPersonPages(array $years): void
     {
-        /** @var array<string, array<int, array{year: int, gameName: string, gameSlug: string, teamName: string, teamSlug: string}>> */
+        /** @var array<string, array<int, array{year: int, projectName: string, projectSlug: string, teamName: string, teamSlug: string}>> */
         $persons = [];
 
-        // Collect all persons from all games
+        // Collect all persons from all projects
         foreach ($years as $year) {
-            $games = GameJamData::getGames($year);
-            if ($games === []) {
+            $projects = JamData::getProjects($year);
+            if ($projects === []) {
                 continue;
             }
 
-            foreach ($games as $entry) {
-                if (!isset($entry['game']) || !isset($entry['team']) || !is_array($entry['game']) || !is_array($entry['team'])) {
+            foreach ($projects as $entry) {
+                if (!isset($entry['project']) || !isset($entry['team']) || !is_array($entry['project']) || !is_array($entry['team'])) {
                     continue;
                 }
 
-                $game = $entry['game'];
+                $project = $entry['project'];
                 $team = $entry['team'];
-                if (!isset($game['name']) || !is_string($game['name'])) {
+                if (!isset($project['name']) || !is_string($project['name'])) {
                     continue;
                 }
 
-                $gameName = $game['name'];
+                $projectName = $project['name'];
                 $teamName = isset($team['name']) && is_string($team['name']) ? $team['name'] : '';
                 $members = isset($team['members']) && is_array($team['members']) ? $team['members'] : [];
 
-                if ($gameName === '' || empty($members)) {
+                if ($projectName === '' || empty($members)) {
                     continue;
                 }
 
-                $gameSlug = Str::slug($gameName);
+                $projectSlug = Str::slug($projectName);
                 $teamSlug = Str::slug($teamName);
 
                 foreach ($members as $member) {
@@ -245,11 +275,11 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
                         $persons[$normalizedName] = [];
                     }
 
-                    // Add game info for this person
+                    // Add project info for this person
                     $persons[$normalizedName][] = [
                         'year' => $year,
-                        'gameName' => $gameName,
-                        'gameSlug' => $gameSlug,
+                        'projectName' => $projectName,
+                        'projectSlug' => $projectSlug,
                         'teamName' => $teamName,
                         'teamSlug' => $teamSlug,
                     ];
@@ -258,14 +288,14 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
         }
 
         // Register a page for each person
-        foreach ($persons as $personName => $games) {
+        foreach ($persons as $personName => $projects) {
             $slug = Str::slug((string) $personName);
             if ($slug === '') {
                 continue;
             }
 
-            // Sort games by year (newest first)
-            usort($games, function (array $a, array $b): int {
+            // Sort projects by year (newest first)
+            usort($projects, function (array $a, array $b): int {
                 return $b['year'] <=> $a['year'];
             });
 
@@ -273,9 +303,9 @@ class GenerateGameJamPagesBuildTask extends PreBuildTask
 
             $page = InMemoryPage::make($identifier, [
                 'personName' => $personName,
-                'games' => $games,
-                'totalGames' => count($games),
-                'years' => array_unique(array_column($games, 'year')),
+                'projects' => $projects,
+                'totalProjects' => count($projects),
+                'years' => array_unique(array_column($projects, 'year')),
             ], '', 'pages.person');
 
             Hyde::pages()->addPage($page);

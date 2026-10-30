@@ -95,9 +95,6 @@ module.exports = {
                 },
             },
             colors: {
-                indigo: {
-                    500: '#5956eb',
-                },
                 yellow: {
                     500: '#eab308',
                     600: '#ca8a04',

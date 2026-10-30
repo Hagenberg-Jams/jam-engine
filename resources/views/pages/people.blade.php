@@ -3,15 +3,15 @@
 @section('content')
 @php
     $persons = $persons ?? [];
-    $totalJams = count(\HagenbergJams\JamEngine\GameJamData::getAvailableYears());
+    $totalJams = count(\HagenbergJams\JamEngine\JamData::getAvailableYears());
 @endphp
 
 <!-- Page Header -->
-<section class="bg-indigo-600 text-white py-16">
+<section class="bg-primary-600 text-white py-16">
     <div class="container mx-auto px-4">
-        <h1 class="text-4xl md:text-5xl font-bold mb-2">People of the Hagenberg Game Jam</h1>
-        <p class="text-xl text-indigo-200">
-            {{ count($persons) }} Participant{{ count($persons) !== 1 ? 's' : '' }} in {{ $totalJams }} Game Jam{{ $totalJams !== 1 ? 's' : '' }}
+        <h1 class="text-4xl md:text-5xl font-bold mb-2">People of the {{ config('hyde.name') }}</h1>
+        <p class="text-xl text-primary-200">
+            {{ count($persons) }} Participant{{ count($persons) !== 1 ? 's' : '' }} in {{ $totalJams }} {{ $totalJams !== 1 ? config('jam.labels.jams') : config('jam.labels.jam') }}
         </p>
     </div>
 </section>
@@ -29,7 +29,7 @@
             </div>
             <div class="flex flex-wrap items-center justify-center gap-4">
                 <input type="search" id="people-search-input" placeholder="Search by name…"
-                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                        aria-label="Search people by name">
                 <button type="button" id="people-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
                     Clear Filter
@@ -42,7 +42,7 @@
                 <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Sort by:</span>
             </div>
             <div class="flex flex-wrap justify-center gap-4" id="sort-buttons">
-                <button class="sort-btn active px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors" data-sort="name-asc">
+                <button class="sort-btn active px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors" data-sort="name-asc">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path>
@@ -93,11 +93,11 @@
                          data-name="{{ strtolower($person['name']) }}" 
                          data-jams="{{ count($person['years']) }}">
                         <a href="/person/{{ $person['slug'] }}" 
-                           class="text-xl font-bold text-indigo-600 dark:text-indigo-400 hover:underline block mb-2">
+                           class="text-xl font-bold text-primary-600 dark:text-primary-400 hover:underline block mb-2">
                             {{ $person['name'] }}
                         </a>
                         <p class="text-sm text-gray-600 dark:text-gray-400">
-                            {{ $person['totalGames'] }} Game{{ $person['totalGames'] !== 1 ? 's' : '' }}
+                            {{ $person['totalProjects'] }} {{ $person['totalProjects'] !== 1 ? config('jam.labels.projects') : config('jam.labels.project') }}
                             @if(count($person['years']) > 0)
                                 · {{ count($person['years']) }} Jam{{ count($person['years']) !== 1 ? 's' : '' }}
                                 @php $ys = $person['years']; $activeRange = min($ys) === max($ys) ? (string) max($ys) : min($ys) . '–' . max($ys); @endphp
@@ -198,10 +198,10 @@ document.addEventListener('DOMContentLoaded', function() {
     sortButtons.forEach(button => {
         button.addEventListener('click', function() {
             sortButtons.forEach(btn => {
-                btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btn.classList.remove('active', 'bg-primary-600', 'text-white');
                 btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200');
             });
-            this.classList.add('active', 'bg-indigo-600', 'text-white');
+            this.classList.add('active', 'bg-primary-600', 'text-white');
             this.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200');
 
             const sortType = this.getAttribute('data-sort');

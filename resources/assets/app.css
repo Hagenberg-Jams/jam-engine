@@ -23,6 +23,21 @@
 
 @config '../../tailwind.config.js';
 
+/* Sites set their brand colours by overriding --jam-primary-* on :root. */
+@theme {
+    --color-primary-50: var(--jam-primary-50, oklch(96.2% .018 272.314));
+    --color-primary-100: var(--jam-primary-100, oklch(93% .034 272.788));
+    --color-primary-200: var(--jam-primary-200, oklch(87% .065 274.039));
+    --color-primary-300: var(--jam-primary-300, oklch(78.5% .115 274.713));
+    --color-primary-400: var(--jam-primary-400, oklch(67.3% .182 276.935));
+    --color-primary-500: var(--jam-primary-500, #5956eb);
+    --color-primary-600: var(--jam-primary-600, oklch(51.1% .262 276.966));
+    --color-primary-700: var(--jam-primary-700, oklch(45.7% .24 277.023));
+    --color-primary-800: var(--jam-primary-800, oklch(39.8% .195 277.366));
+    --color-primary-900: var(--jam-primary-900, oklch(35.9% .144 278.697));
+    --color-primary-950: var(--jam-primary-950, oklch(25.7% .09 281.288));
+}
+
 /* Hero Slider Styles */
 .hero-slider-container {
     position: absolute;

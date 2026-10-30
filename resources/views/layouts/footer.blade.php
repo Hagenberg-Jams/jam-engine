@@ -1,12 +1,13 @@
 @php
-    $companyName = config('gamejam.company.name', 'University of Applied Sciences Upper Austria – Department of Digital Media');
-    $email = config('gamejam.email', 'info@hagenberg-gamejam.at');
-    $companyAddress = config('gamejam.company.address', '');
-    $companyUrl = config('gamejam.company.url', '');
-    $logoLight = ltrim((string) config('gamejam.branding.logo_light', 'hagenberg_game_jam_logo_white.svg'), '/');
-    $instagramUrl = config('gamejam.social.instagram', '');
-    $discordUrl = config('gamejam.social.discord', '');
-    $githubUrl = config('gamejam.social.github', '');
+    $companyName = config('jam.company.name', '');
+    $email = config('jam.email', '');
+    $companyAddress = config('jam.company.address', '');
+    $companyUrl = config('jam.company.url', '');
+    $logoLight = ltrim((string) config('jam.branding.logo_light', ''), '/');
+    $instagramUrl = config('jam.social.instagram', '');
+    $discordUrl = config('jam.social.discord', '');
+    $githubUrl = config('jam.social.github', '');
+    $youtubeUrl = config('jam.social.youtube', '');
 @endphp
 
 <footer class="bg-gray-800 text-white mt-auto">
@@ -16,7 +17,11 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Logo -->
                 <div>
-                    <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name', 'Hagenberg Game Jam') }}" width="96" height="96" class="h-24">
+                    @if($logoLight)
+                        <img src="/media/{{ $logoLight }}" alt="{{ config('hyde.name') }}" width="96" height="96" class="h-24">
+                    @else
+                        <p class="text-2xl font-bold">{{ config('hyde.name') }}</p>
+                    @endif
                 </div>
 
                 <!-- Contact -->
@@ -45,6 +50,13 @@
                         <a href="{{ $discordUrl }}" target="_blank" class="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="Discord">
                             <svg class="w-6 h-6" viewBox="0 0 512 512">
                                 <path fill="#000000" d="M433.43,93.222c-32.633-14.973-67.627-26.005-104.216-32.324c-0.666-0.122-1.332,0.183-1.675,0.792   c-4.501,8.005-9.486,18.447-12.977,26.655c-39.353-5.892-78.505-5.892-117.051,0c-3.492-8.39-8.658-18.65-13.179-26.655   c-0.343-0.589-1.009-0.894-1.675-0.792c-36.568,6.298-71.562,17.33-104.216,32.324c-0.283,0.122-0.525,0.325-0.686,0.589   c-66.376,99.165-84.56,195.893-75.64,291.421c0.04,0.467,0.303,0.914,0.666,1.198c43.793,32.161,86.215,51.685,127.848,64.627   c0.666,0.203,1.372-0.04,1.796-0.589c9.848-13.449,18.627-27.63,26.154-42.543c0.444-0.873,0.02-1.909-0.888-2.255   c-13.925-5.282-27.184-11.723-39.939-19.036c-1.009-0.589-1.09-2.032-0.161-2.723c2.684-2.011,5.369-4.104,7.932-6.217   c0.464-0.386,1.11-0.467,1.655-0.224c83.792,38.257,174.507,38.257,257.31,0c0.545-0.264,1.191-0.182,1.675,0.203   c2.564,2.113,5.248,4.226,7.952,6.237c0.928,0.691,0.867,2.134-0.141,2.723c-12.755,7.456-26.014,13.754-39.959,19.016   c-0.908,0.345-1.312,1.402-0.867,2.275c7.689,14.892,16.468,29.073,26.134,42.523c0.404,0.569,1.13,0.813,1.796,0.609   c41.835-12.941,84.257-32.466,128.05-64.627c0.384-0.284,0.626-0.711,0.666-1.178c10.676-110.441-17.881-206.376-75.7-291.421   C433.954,93.547,433.712,93.344,433.43,93.222z M171.094,327.065c-25.227,0-46.014-23.16-46.014-51.604   s20.383-51.604,46.014-51.604c25.831,0,46.417,23.364,46.013,51.604C217.107,303.905,196.723,327.065,171.094,327.065z    M341.221,327.065c-25.226,0-46.013-23.16-46.013-51.604s20.383-51.604,46.013-51.604c25.832,0,46.417,23.364,46.014,51.604   C387.235,303.905,367.054,327.065,341.221,327.065z"/>
+                            </svg>
+                        </a>
+                        @endif
+                        @if($youtubeUrl)
+                        <a href="{{ $youtubeUrl }}" target="_blank" class="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="YouTube">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                <path fill="#000000" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
                             </svg>
                         </a>
                         @endif

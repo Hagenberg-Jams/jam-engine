@@ -7,28 +7,31 @@ namespace HagenbergJams\JamEngine\Commands;
 use function file_exists;
 use function file_put_contents;
 
-use HagenbergJams\JamEngine\GameJamData;
+use HagenbergJams\JamEngine\JamData;
 use Illuminate\Console\Command;
 
 use function mkdir;
 use function preg_match;
 
 /**
- * Command to create a new Game Jam year with metadata file and empty games YAML.
+ * Command to create a new jam year with metadata file and empty projects YAML.
  *
  * This command interactively asks for all required data and creates:
  * - `_data/jams/{year}.yaml` with jam metadata
- * - `_data/games/games{year}.yaml` (empty or with comment)
+ * - `_data/projects/{year}.yaml` (empty or with comment)
  */
-class CreateGameJamCommand extends Command
+class CreateJamCommand extends Command
 {
-    protected $signature = 'gamejam:create-jam';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:create-jam'];
 
-    protected $description = 'Create a new Game Jam year with metadata files';
+    protected $signature = 'jam:create-jam';
+
+    protected $description = 'Create a new jam year with metadata files';
 
     public function handle(): int
     {
-        $this->info('Creating a new Game Jam...');
+        $this->info('Creating a new jam...');
         $this->newLine();
 
         // Get year
@@ -49,7 +52,7 @@ class CreateGameJamCommand extends Command
         // Get all required data
         $titleInput = $this->ask("Title (default: '{$year}')", (string) $year);
         $title = is_string($titleInput) ? $titleInput : (string) $year;
-        $topicInput = $this->ask('Topic/Theme of the Game Jam');
+        $topicInput = $this->ask('Topic/Theme of the jam');
         $topic = is_string($topicInput) ? $topicInput : '';
         $startDate = $this->askForDate('Start date', 'YYYY-MM-DD');
         $endDate = $this->askForDate('End date', 'YYYY-MM-DD');
@@ -59,12 +62,12 @@ class CreateGameJamCommand extends Command
         // Create jam YAML file
         $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours);
 
-        // Create empty games YAML file
-        $yamlFile = base_path("_data/games/games{$year}.yaml");
+        // Create empty projects YAML file
+        $yamlFile = base_path("_data/projects/{$year}.yaml");
         if (!file_exists($yamlFile)) {
             $this->createGamesYamlFile($year);
         } else {
-            $this->warn("Games YAML file already exists: {$yamlFile}");
+            $this->warn("Projects YAML file already exists: {$yamlFile}");
         }
 
         // Update navigation configuration
@@ -75,13 +78,13 @@ class CreateGameJamCommand extends Command
         $decadeLabel = "{$decade}s";
 
         $this->newLine();
-        $this->info("Successfully created Game Jam {$year}!");
+        $this->info("Successfully created jam {$year}!");
         $this->info("  - Jam metadata: _data/jams/{$year}.yaml");
-        $this->info("  - Games data: _data/games/games{$year}.yaml");
+        $this->info("  - Projects data: _data/projects/{$year}.yaml");
         $this->info("  - Archive: Will appear in '{$decadeLabel}' navigation menu");
 
         // Check if this is the latest jam
-        $allYears = GameJamData::getAvailableYears();
+        $allYears = JamData::getAvailableYears();
         $highestYear = !empty($allYears) ? max($allYears) : $year;
         if ($year >= $highestYear) {
             $this->info("  - Navigation: Set as latest jam (appears separately in navigation)");
@@ -139,7 +142,6 @@ class CreateGameJamCommand extends Command
             'startdate' => $startDate,
             'enddate' => $endDate,
             'hours' => $hours,
-            'data' => "games{$year}",
         ];
 
         $file = base_path("_data/jams/{$year}.yaml");
@@ -156,25 +158,25 @@ class CreateGameJamCommand extends Command
 
     protected function createGamesYamlFile(int $year): void
     {
-        $file = base_path("_data/games/games{$year}.yaml");
+        $file = base_path("_data/projects/{$year}.yaml");
         $dir = dirname($file);
 
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        $content = "# Games for {$year} Game Jam\n";
-        $content .= "# Add game entries below using: php hyde gamejam:add-game\n";
+        $content = "# Projects for {$year} jam\n";
+        $content .= "# Add project entries below using: php hyde jam:add-project\n";
         $content .= "\n";
 
         file_put_contents($file, $content);
-        $this->info("Created empty games YAML file: {$file}");
+        $this->info("Created empty projects YAML file: {$file}");
     }
 
     protected function updateNavigationConfig(int $year): void
     {
         // Get all available years (including the one we just created)
-        $allYears = GameJamData::getAvailableYears();
+        $allYears = JamData::getAvailableYears();
 
         if (empty($allYears)) {
             $this->warn("No years found, cannot determine latest jam");
@@ -192,8 +194,8 @@ class CreateGameJamCommand extends Command
             return;
         }
 
-        // Update config/gamejam.php - latest_jam
-        $configFile = base_path('config/gamejam.php');
+        // Update config/jam.php - latest_jam
+        $configFile = base_path('config/jam.php');
         if (!file_exists($configFile)) {
             $this->warn("Config file not found: {$configFile}");
             return;
@@ -207,13 +209,13 @@ class CreateGameJamCommand extends Command
 
         // Update latest_jam only if this is the highest year
         $content = preg_replace(
-            "/'latest_jam' => env\('GAMEJAM_LATEST_JAM', '\d+'\),/",
-            "'latest_jam' => env('GAMEJAM_LATEST_JAM', '{$year}'),",
+            "/('latest_jam' => env\\('[A-Z_]+', )'\\d+'\\),/",
+            "\$1'{$year}'),",
             $content,
         );
 
         file_put_contents($configFile, $content);
-        $this->info("Updated config/gamejam.php: latest_jam = {$year} (highest year)");
+        $this->info("Updated config/jam.php: latest_jam = {$year} (highest year)");
 
         // Update Hyde config
         $this->updateHydeConfig($year);

@@ -77,28 +77,63 @@
         var cookieBanner = document.getElementById('cookie-banner');
         var cookieAccept = document.getElementById('cookie-accept');
         var cookieReject = document.getElementById('cookie-reject');
-        var youtubeAcceptCookies = document.getElementById('youtube-accept-cookies');
-        var cookiePlaceholder = document.getElementById('youtube-cookie-placeholder');
-        var videoContainer = document.getElementById('youtube-video-container');
         var consentKey = 'cookie-consent-youtube';
+
+        function refreshYoutubeEmbeds() {
+            var accepted = localStorage.getItem(consentKey) === 'accepted';
+
+            document.querySelectorAll('.youtube-embed').forEach(function (embed) {
+                var placeholder = embed.querySelector('.youtube-cookie-placeholder');
+                var container = embed.querySelector('.youtube-video-container');
+                var thumbnail = embed.querySelector('.youtube-thumbnail');
+                var youtubeId = embed.getAttribute('data-youtube-id');
+
+                placeholder.classList.toggle('hidden', accepted);
+                container.classList.toggle('hidden', !accepted);
+
+                if (accepted && youtubeId && !thumbnail.getAttribute('src')) {
+                    thumbnail.addEventListener('error', function () {
+                        if (thumbnail.src.indexOf('hqdefault') === -1) {
+                            thumbnail.src = 'https://img.youtube.com/vi/' + youtubeId + '/hqdefault.jpg';
+                        }
+                    });
+                    thumbnail.src = 'https://img.youtube.com/vi/' + youtubeId + '/maxresdefault.jpg';
+                }
+            });
+        }
+
+        window.jamRefreshYoutubeEmbeds = refreshYoutubeEmbeds;
 
         function applyConsentState() {
             var consent = localStorage.getItem(consentKey);
 
-            if (consent === 'accepted') {
-                if (cookieBanner) cookieBanner.classList.add('hidden');
-                if (cookiePlaceholder) cookiePlaceholder.classList.add('hidden');
-                if (videoContainer) videoContainer.classList.remove('hidden');
-            } else if (consent === 'rejected') {
-                if (cookieBanner) cookieBanner.classList.add('hidden');
-                if (cookiePlaceholder) cookiePlaceholder.classList.remove('hidden');
-                if (videoContainer) videoContainer.classList.add('hidden');
-            } else {
-                if (cookieBanner) cookieBanner.classList.remove('hidden');
-                if (cookiePlaceholder) cookiePlaceholder.classList.remove('hidden');
-                if (videoContainer) videoContainer.classList.add('hidden');
-            }
+            if (cookieBanner) cookieBanner.classList.toggle('hidden', consent === 'accepted' || consent === 'rejected');
+            refreshYoutubeEmbeds();
         }
+
+        function playYoutubeEmbed(embed) {
+            var youtubeId = embed.getAttribute('data-youtube-id');
+            if (!youtubeId || localStorage.getItem(consentKey) !== 'accepted') {
+                return;
+            }
+            embed.querySelector('.youtube-placeholder').classList.add('hidden');
+            embed.querySelector('.youtube-iframe-container').classList.remove('hidden');
+            embed.querySelector('iframe').src = 'https://www.youtube-nocookie.com/embed/' + youtubeId + '?autoplay=1';
+        }
+
+        document.querySelectorAll('.youtube-embed').forEach(function (embed) {
+            var player = embed.querySelector('.youtube-placeholder');
+            embed.querySelector('.youtube-accept-cookies').addEventListener('click', acceptCookies);
+            player.addEventListener('click', function () {
+                playYoutubeEmbed(embed);
+            });
+            player.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    playYoutubeEmbed(embed);
+                }
+            });
+        });
 
         function acceptCookies() {
             localStorage.setItem(consentKey, 'accepted');
@@ -119,7 +154,6 @@
 
         if (cookieAccept) cookieAccept.addEventListener('click', acceptCookies);
         if (cookieReject) cookieReject.addEventListener('click', rejectCookies);
-        if (youtubeAcceptCookies) youtubeAcceptCookies.addEventListener('click', acceptCookies);
 
         var cookieSettingsLink = document.getElementById('cookie-settings-link');
         if (cookieSettingsLink) cookieSettingsLink.addEventListener('click', function (e) {

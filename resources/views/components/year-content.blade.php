@@ -1,18 +1,21 @@
 @php
-    // $year, $jam, $games, $siteConfig are passed from the parent
+    // $year, $jam, $projects, $siteConfig are passed from the parent
     use Carbon\Carbon;
     use Illuminate\Support\Str;
+
+    $projectFilters = config('jam.project.filters', []);
+    $cardMeta = config('jam.project.card_meta', []);
 @endphp
 
         <!-- Page Header -->
-<section class="bg-indigo-600 text-white py-16">
+<section class="bg-primary-600 text-white py-16">
     <div class="container mx-auto px-4">
         <h1 class="text-4xl md:text-5xl font-bold mb-2">{{ $year }}</h1>
         @if($jam && isset($jam['topic']))
-            <p class="text-xl text-indigo-200 mb-4">{{ $jam['topic'] }}</p>
+            <p class="text-xl text-primary-200 mb-4">{{ $jam['topic'] }}</p>
         @endif
         @if($jam && (isset($jam['startdate']) || isset($jam['enddate']) || isset($jam['hours'])))
-            <p class="text-indigo-200">
+            <p class="text-primary-200">
                 @if(isset($jam['startdate']) && isset($jam['enddate']))
                     @php
                         $startDate = Carbon::parse($jam['startdate']);
@@ -38,7 +41,7 @@
 
 <!-- Filter Buttons -->
 <section class="py-8 bg-gray-200 dark:bg-gray-800" aria-labelledby="filter-heading">
-    <h2 id="filter-heading" class="sr-only">Filter games</h2>
+    <h2 id="filter-heading" class="sr-only">Filter {{ config('jam.labels.projects_lower') }}</h2>
     <div class="container mx-auto px-4">
         <div class="flex flex-wrap items-center justify-center gap-4">
             <div class="flex items-center gap-2">
@@ -50,43 +53,32 @@
                 <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter:</span>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-4">
-                <input type="search" id="game-search-input" placeholder="Search games or teams…"
-                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                       aria-label="Search games or teams by name">
-                <button type="button" id="game-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
+                <input type="search" id="project-search-input" placeholder="Search {{ config('jam.labels.projects_lower') }} or teams…"
+                       class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                       aria-label="Search {{ config('jam.labels.projects_lower') }} or teams by name">
+                <button type="button" id="project-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
                     Clear Filter
                 </button>
             </div>
+            @if(count($projectFilters) > 0)
             <div class="flex flex-wrap justify-center gap-4" id="filter-buttons">
-                <button class="filter-btn active px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
-                        data-filter="*">All Games
+                <button class="filter-btn active px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                        data-filter="*">All {{ config('jam.labels.projects') }}
                 </button>
+                @foreach($projectFilters as $projectFilter)
                 <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".singleplayer">Singleplayer
+                        data-filter="{{ $projectFilter['selector'] }}">{{ $projectFilter['label'] }}
                 </button>
-                <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".multiplayer">Multiplayer
-                </button>
-                <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".keyboard">Keyboard
-                </button>
-                <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".mouse">Mouse
-                </button>
-                <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".gamepad">Gamepad
-                </button>
-                <button class="filter-btn px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        data-filter=".experimental">Experimental
-                </button>
+                @endforeach
             </div>
+            @endif
         </div>
     </div>
 </section>
 
 <!-- Winners Section -->
 @php
-    $winners = collect($games)->filter(function($entry) {
+    $winners = collect($projects)->filter(function($entry) {
         $winner = $entry['winner'] ?? 'no';
         return $winner !== 'no' && $winner !== '';
     });
@@ -97,9 +89,9 @@
     if($winners->isNotEmpty()) {
         foreach($winners as $entry) {
             $winner = $entry['winner'] ?? 'no';
-            $gameName = $entry['game']['name'] ?? 'Unknown Game';
+            $projectName = $entry['project']['name'] ?? 'Unknown ' . config('jam.labels.project');
             $teamName = $entry['team']['name'] ?? 'Unknown Team';
-            $gameSlug = Str::slug($gameName);
+            $projectSlug = Str::slug($projectName);
             
             // Handle multiple categories (e.g., "jury, people")
             $categories = array_map('trim', explode(',', $winner));
@@ -109,9 +101,9 @@
                     $winnersByCategory[$category] = [];
                 }
                 $winnersByCategory[$category][] = [
-                    'game' => $gameName,
+                    'project' => $projectName,
                     'team' => $teamName,
-                    'slug' => $gameSlug,
+                    'slug' => $projectSlug,
                 ];
             }
         }
@@ -119,18 +111,8 @@
         $hasWinners = count($winnersByCategory) > 0;
     }
     
-    // Category display names
-    $categoryNames = [
-        'overall' => 'Overall Winner',
-        'jury' => 'Jury Award',
-        'people' => 'People\'s Choice',
-        'risingstars' => 'Rising Stars',
-        'masterminds' => 'Masterminds',
-        'youngblood' => 'Young Blood',
-    ];
-    
-    // Category order
-    $categoryOrder = ['overall', 'jury', 'people', 'youngblood', 'risingstars', 'masterminds'];
+    $categoryNames = config('jam.awards', []);
+    $categoryOrder = array_keys($categoryNames);
 @endphp
 
 @if($hasWinners)
@@ -145,7 +127,7 @@
                                 Winner in the category <strong
                                         class="font-semibold dark:text-white">{{ $categoryNames[$category] ?? ucfirst($category) }}</strong>:
                                 <a href="/{{ $year }}/{{ $winner['slug'] }}"
-                                   class="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">{{ $winner['game'] }}</a>
+                                   class="text-primary-600 dark:text-primary-400 hover:underline font-semibold">{{ $winner['project'] }}</a>
                                 by {{ $winner['team'] }}
                             </p>
                         @endforeach
@@ -156,18 +138,21 @@
     </section>
 @endif
 
-<!-- Games Grid -->
-<section class="py-16 bg-white dark:bg-gray-900" aria-labelledby="games-heading">
-    <h2 id="games-heading" class="sr-only">Games</h2>
+<!-- Projects Grid -->
+<section class="py-16 bg-white dark:bg-gray-900" aria-labelledby="projects-heading">
+    <h2 id="projects-heading" class="sr-only">{{ config('jam.labels.projects') }}</h2>
     <div class="container mx-auto px-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="games-grid">
-            @foreach($games as $entry)
+        @if(count($projects) === 0)
+            <p class="text-center text-gray-600 dark:text-gray-400 text-lg">No {{ config('jam.labels.projects_lower') }} have been published for this year yet.</p>
+        @endif
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="projects-grid">
+            @foreach($projects as $entry)
                 @php
-                    $game = $entry['game'] ?? [];
+                    $project = $entry['project'] ?? [];
                     $team = $entry['team'] ?? [];
-                    $gameName = $game['name'] ?? 'Unknown Game';
-                    $gameSlug = Str::slug($gameName ?? 'unknown');
-                    $players = $game['players'] ?? 1;
+                    $projectName = $project['name'] ?? 'Unknown ' . config('jam.labels.project');
+                    $projectSlug = Str::slug($projectName ?? 'unknown');
+                    $players = $project['players'] ?? 1;
                     // Extract minimum player count for filtering (handle ranges like "3-8")
                     $minPlayers = 1;
                     if (preg_match('/^(\d+)-(\d+)$/', (string) $players, $matches)) {
@@ -175,20 +160,20 @@
                     } else {
                         $minPlayers = (int) $players;
                     }
-                    $playerClass = $minPlayers == 1 ? 'singleplayer' : 'multiplayer';
-                    $controls = $game['controls'] ?? [];
+                    $playerClass = in_array('players', $cardMeta, true) ? ($minPlayers == 1 ? 'singleplayer' : 'multiplayer') : '';
+                    $controls = $project['controls'] ?? [];
                     $controlClasses = implode(' ', array_map('strtolower', $controls));
-                    $description = $game['description'] ?? '';
+                    $description = $project['description'] ?? '';
                     $headerImage = $entry['headerimage'] ?? '';
                     $imagePath = $headerImage ? "{$year}/{$headerImage}" : '';
                     $winner = $entry['winner'] ?? 'no';
                     $isWinner = $winner !== 'no' && $winner !== '';
                 @endphp
-                <div class="game-card {{ $playerClass }} {{ $controlClasses }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-                     data-game-name="{{ strtolower($gameName) }}" data-team-name="{{ strtolower($team['name'] ?? '') }}">
+                <div class="project-card {{ $playerClass }} {{ $controlClasses }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                     data-project-name="{{ strtolower($projectName) }}" data-team-name="{{ strtolower($team['name'] ?? '') }}">
                     <div class="relative h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         @if($imagePath && file_exists(base_path("_media/{$year}/{$headerImage}")))
-                            <img src="/media/{{ $year }}/{{ $headerImage }}" alt="{{ $gameName }}"
+                            <img src="/media/{{ $year }}/{{ $headerImage }}" alt="{{ $projectName }}"
                                  class="w-full h-full object-cover">
                         @else
                             <div class="w-full h-full flex items-center justify-center text-gray-400">
@@ -199,7 +184,7 @@
                             </div>
                         @endif
                         <div class="absolute top-4 left-4">
-                            <span class="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ $team['name'] ?? 'Unknown Team' }}</span>
+                            <span class="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ $team['name'] ?? 'Unknown Team' }}</span>
                         </div>
                         @if($isWinner)
                             <div class="absolute top-4 right-4">
@@ -215,11 +200,12 @@
                     </div>
                     <div class="p-6">
                         <h3 class="text-xl font-bold mb-2 dark:text-white">
-                            <a href="/{{ $year }}/{{ $gameSlug }}"
-                               class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{{ $gameName }}</a>
+                            <a href="/{{ $year }}/{{ $projectSlug }}"
+                               class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{{ $projectName }}</a>
                         </h3>
                         <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{{ Str::limit(strip_tags($description), 100) }}</p>
                         <div class="flex gap-2 flex-wrap mb-4">
+                        @if(in_array('players', $cardMeta, true))
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
                             @php
                                 // Format players display: support ranges like "3-8" or single numbers
@@ -231,21 +217,21 @@
                                 }
                             @endphp
                         </span>
-                            @foreach($controls as $control)
+                        @endif
+                            @foreach(in_array('controls', $cardMeta, true) ? $controls : [] as $control)
                                 <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded capitalize">{{ $control }}</span>
                             @endforeach
                             @php
                                 $downloads = $entry['download'] ?? [];
                                 $platforms = collect($downloads)->pluck('platform')->unique()->values();
                             @endphp
-                            @foreach($platforms as $platform)
+                            @foreach(in_array('platforms', $cardMeta, true) ? $platforms : [] as $platform)
                                 <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">{{ $platform }}</span>
                             @endforeach
                         </div>
                         <div>
-                            <a href="/{{ $year }}/{{ $gameSlug }}"
-                               class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Details and
-                                Download →</a>
+                            <a href="/{{ $year }}/{{ $projectSlug }}"
+                               class="text-primary-600 dark:text-primary-400 font-semibold hover:underline">{{ config('jam.labels.card_cta') }} →</a>
                         </div>
                     </div>
                 </div>
@@ -258,9 +244,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const filterButtons = document.querySelectorAll('.filter-btn');
-            const gameCards = document.querySelectorAll('.game-card');
-            const searchInput = document.getElementById('game-search-input');
-            const clearBtn = document.getElementById('game-search-clear');
+            const projectCards = document.querySelectorAll('.project-card');
+            const searchInput = document.getElementById('project-search-input');
+            const clearBtn = document.getElementById('project-search-clear');
 
             function getActiveCategoryFilter() {
                 const active = document.querySelector('.filter-btn.active');
@@ -271,10 +257,10 @@
                 const categoryFilter = getActiveCategoryFilter();
                 const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
 
-                gameCards.forEach(card => {
+                projectCards.forEach(card => {
                     const matchesCategory = categoryFilter === '*' || card.matches(categoryFilter);
                     const matchesSearch = !searchTerm || (
-                        (card.getAttribute('data-game-name') || '').includes(searchTerm) ||
+                        (card.getAttribute('data-project-name') || '').includes(searchTerm) ||
                         (card.getAttribute('data-team-name') || '').includes(searchTerm)
                     );
                     const show = matchesCategory && matchesSearch;
@@ -298,10 +284,10 @@
             filterButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     filterButtons.forEach(btn => {
-                        btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                        btn.classList.remove('active', 'bg-primary-600', 'text-white');
                         btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200');
                     });
-                    this.classList.add('active', 'bg-indigo-600', 'text-white');
+                    this.classList.add('active', 'bg-primary-600', 'text-white');
                     this.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-800', 'dark:text-gray-200');
                     applyFilters();
                 });
@@ -319,7 +305,7 @@
                 });
             }
 
-            gameCards.forEach(card => {
+            projectCards.forEach(card => {
                 card.style.transition = 'opacity 0.3s, transform 0.3s';
                 card.style.opacity = '1';
                 card.style.transform = 'scale(1)';

@@ -20,18 +20,21 @@ use function pathinfo;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Command to generate printable PDF sheets for games of a specific year.
+ * Command to generate printable PDF sheets for projects of a specific year.
  *
- * Each game gets its own A4 PDF with:
+ * Each project gets its own A4 PDF with:
  * - Title
  * - Team name and members
  * - Description
  * - Controls
  * - Screenshots
  */
-class PrintGameSheetsCommand extends Command
+class PrintProjectSheetsCommand extends Command
 {
-    protected $signature = 'gamejam:print {year : The year of the Game Jam} {--only= : Comma-separated list of game slugs to print (optional)}';
+    /** @var array<int, string> */
+    protected $aliases = ['gamejam:print'];
+
+    protected $signature = 'jam:print {year : The year of the jam} {--only= : Comma-separated list of project slugs to print (optional)}';
 
     protected $description = 'Generate printable PDF sheets for games';
 
@@ -43,28 +46,28 @@ class PrintGameSheetsCommand extends Command
         $this->info("Generating PDF sheets for {$year}...");
         $this->newLine();
 
-        // Load games YAML
-        $yamlFile = base_path("_data/games/games{$year}.yaml");
+        // Load projects YAML
+        $yamlFile = base_path("_data/projects/{$year}.yaml");
         if (!file_exists($yamlFile)) {
-            $this->error("Games YAML file not found: {$yamlFile}");
+            $this->error("Projects YAML file not found: {$yamlFile}");
             return 1;
         }
 
-        $games = Yaml::parseFile($yamlFile);
-        if (!is_array($games)) {
+        $projects = Yaml::parseFile($yamlFile);
+        if (!is_array($projects)) {
             $this->error('Invalid YAML structure');
             return 1;
         }
 
-        // Filter games if --only is specified
+        // Filter projects if --only is specified
         if ($onlySlugs !== null && is_string($onlySlugs)) {
             $slugList = array_map('trim', explode(',', $onlySlugs));
-            $games = array_filter($games, function ($entry) use ($slugList): bool {
-                if (!is_array($entry) || !isset($entry['game']) || !is_array($entry['game'])) {
+            $projects = array_filter($projects, function ($entry) use ($slugList): bool {
+                if (!is_array($entry) || !isset($entry['project']) || !is_array($entry['project'])) {
                     return false;
                 }
-                $gameName = $entry['game']['name'] ?? '';
-                $slug = Str::slug(is_string($gameName) ? $gameName : '');
+                $projectName = $entry['project']['name'] ?? '';
+                $slug = Str::slug(is_string($projectName) ? $projectName : '');
                 return in_array($slug, $slugList, true);
             });
         }
@@ -81,19 +84,19 @@ class PrintGameSheetsCommand extends Command
         $successCount = 0;
         $errorCount = 0;
 
-        foreach ($games as $entry) {
+        foreach ($projects as $entry) {
             if (!is_array($entry)) {
                 continue;
             }
-            $game = $entry['game'] ?? [];
+            $project = $entry['project'] ?? [];
             $team = $entry['team'] ?? [];
-            if (!is_array($game)) {
+            if (!is_array($project)) {
                 continue;
             }
-            $gameName = is_string($game['name'] ?? null) ? $game['name'] : 'Unknown Game';
-            $gameSlug = Str::slug($gameName);
+            $projectName = is_string($project['name'] ?? null) ? $project['name'] : 'Unknown Project';
+            $projectSlug = Str::slug($projectName);
 
-            $this->line("  Processing: {$gameName}");
+            $this->line("  Processing: {$projectName}");
 
             try {
                 $pdfPath = $this->generatePdf($year, $entry, $outputDir);
@@ -116,22 +119,22 @@ class PrintGameSheetsCommand extends Command
     }
 
     /**
-     * Generate PDF for a single game
+     * Generate PDF for a single project
      *
      * @param array<mixed> $entry Parsed from YAML, not validated
      */
     protected function generatePdf(int $year, array $entry, string $outputDir): string
     {
-        $game = is_array($entry['game'] ?? null) ? $entry['game'] : [];
+        $project = is_array($entry['project'] ?? null) ? $entry['project'] : [];
         $team = is_array($entry['team'] ?? null) ? $entry['team'] : [];
-        $gameName = is_string($game['name'] ?? null) ? $game['name'] : 'Unknown Game';
-        $gameSlug = Str::slug($gameName);
-        $description = is_string($game['description'] ?? null) ? $game['description'] : '';
-        $controlsText = is_string($game['controls_text'] ?? null) ? $game['controls_text'] : null;
-        $players = $game['players'] ?? 1;
+        $projectName = is_string($project['name'] ?? null) ? $project['name'] : 'Unknown Project';
+        $projectSlug = Str::slug($projectName);
+        $description = is_string($project['description'] ?? null) ? $project['description'] : '';
+        $controlsText = is_string($project['controls_text'] ?? null) ? $project['controls_text'] : null;
+        $players = $project['players'] ?? 1;
         $images = is_array($entry['images'] ?? null) ? $entry['images'] : [];
         $headerImage = is_string($entry['headerimage'] ?? null) ? $entry['headerimage'] : '';
-        $controls = is_array($game['controls'] ?? null) ? $game['controls'] : [];
+        $controls = is_array($project['controls'] ?? null) ? $project['controls'] : [];
         $downloads = is_array($entry['download'] ?? null) ? $entry['download'] : [];
 
         // Prepare image paths (use full images for PDF)
@@ -186,9 +189,9 @@ class PrintGameSheetsCommand extends Command
         }
 
         // Render HTML
-        $html = View::make('pdf.game-sheet', [
+        $html = View::make('pdf.project-sheet', [
             'year' => $year,
-            'gameName' => $gameName,
+            'projectName' => $projectName,
             'teamName' => $team['name'] ?? '',
             'teamMembers' => $team['members'] ?? [],
             'description' => $description,
@@ -212,7 +215,7 @@ class PrintGameSheetsCommand extends Command
         $dompdf->render();
 
         // Save PDF
-        $pdfPath = $outputDir . '/' . $gameSlug . '.pdf';
+        $pdfPath = $outputDir . '/' . $projectSlug . '.pdf';
         file_put_contents($pdfPath, $dompdf->output());
 
         return pathinfo($pdfPath, PATHINFO_BASENAME);

@@ -1,8 +1,8 @@
 @php
     use Hyde\Framework\Features\Navigation\NavigationItem;
 
-    $latestJam = (string) config('gamejam.latest_jam', '2024');
-    $archiveYears = array_values(array_filter(\HagenbergJams\JamEngine\GameJamData::getAvailableYears(), fn (int $y) => (string) $y !== $latestJam));
+    $latestJam = (string) config('jam.latest_jam', '');
+    $archiveYears = array_values(array_filter(\HagenbergJams\JamEngine\JamData::getAvailableYears(), fn (int $y) => (string) $y !== $latestJam));
     rsort($archiveYears);
     
     // Group years by decade
@@ -78,14 +78,18 @@
             @endif
 
             {{-- 4) People --}}
+            @if(config('jam.features.people'))
             <li class="md:mx-2">
                 <x-navigation.navigation-link :item="NavigationItem::create('people', 'People', 15)"/>
             </li>
+            @endif
 
             {{-- 5) Rules --}}
+            @if(config('jam.features.rules') && \HagenbergJams\JamEngine\JamData::getRules() !== [])
             <li class="md:mx-2">
                 <x-navigation.navigation-link :item="NavigationItem::create('rules', 'Rules', 20)"/>
             </li>
+            @endif
 
             {{-- 5) Imprint --}}
             <li class="md:mx-2">
