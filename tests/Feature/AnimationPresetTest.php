@@ -48,6 +48,17 @@ it('shows the site name when there is no logo', function (): void {
     expect(page($GLOBALS['animationSite'], 'index.html'))->toContain('<span class="text-lg">Test Jam</span>');
 });
 
+it('shows a sponsor without a URL as a plain logo', function (): void {
+    $site = buildSite('animation', prepare: function (string $site): void {
+        file_put_contents("{$site}/_data/homepage.yaml", "sponsors:\n  items:\n    - { name: 'Plain Sponsor', logo: plain.svg }\n    - { name: 'Linked Sponsor', logo: linked.svg, url: 'https://sponsor.example.test' }\n", FILE_APPEND);
+    });
+    $html = page($site, 'index.html');
+
+    expect($html)->toContain('alt="Plain Sponsor"')
+        ->toContain('href="https://sponsor.example.test"')
+        ->not->toContain('href="#" target="_blank"');
+});
+
 it('can turn off the people pages', function (): void {
     $site = buildSite('animation', prepare: function (string $site): void {
         $config = (string) file_get_contents("{$site}/config/jam.php");

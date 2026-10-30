@@ -52,15 +52,26 @@ class CreateJamCommand extends Command
         // Get all required data
         $titleInput = $this->ask("Title (default: '{$year}')", (string) $year);
         $title = is_string($titleInput) ? $titleInput : (string) $year;
-        $topicInput = $this->ask('Topic/Theme of the jam');
-        $topic = is_string($topicInput) ? $topicInput : '';
-        $startDate = $this->askForDate('Start date', 'YYYY-MM-DD');
-        $endDate = $this->askForDate('End date', 'YYYY-MM-DD');
+        $releaseInput = $this->ask('Topic release, if the topic is still secret (YYYY-MM-DD HH:MM, leave empty if not)', '');
+        $topicRelease = is_string($releaseInput) ? trim($releaseInput) : '';
+        $topic = '';
+
+        // A topic with a release time must not be written to a file, see the README of the engine.
+        if ($topicRelease === '') {
+            $topicInput = $this->ask('Topic/Theme of the jam');
+            $topic = is_string($topicInput) ? $topicInput : '';
+        } else {
+            $topicRelease = $this->withTimezone($topicRelease);
+            $this->warn('Store the topic as the JAM_TOPIC secret on GitHub, not in the repository.');
+        }
+
+        $startDate = $this->askForDate('Start date', 'YYYY-MM-DD or YYYY-MM-DD HH:MM');
+        $endDate = $this->askForDate('End date', 'YYYY-MM-DD or YYYY-MM-DD HH:MM');
         $hoursInput = $this->ask('Duration in hours (e.g., 36, 48)', '36');
         $hours = is_numeric($hoursInput) ? (int) $hoursInput : 36;
 
         // Create jam YAML file
-        $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours);
+        $this->createJamFile($year, $title, $topic, $startDate, $endDate, $hours, $topicRelease);
 
         // Create empty projects YAML file
         $yamlFile = base_path("_data/projects/{$year}.yaml");
@@ -125,24 +136,33 @@ class CreateJamCommand extends Command
                 continue;
             }
 
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $input) !== 1) {
-                $this->error("Date must be in format {$format}");
-                continue;
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $input) === 1) {
+                return $input;
             }
 
-            return $input;
+            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $input) === 1) {
+                return $this->withTimezone($input);
+            }
+
+            $this->error("Date must be in format {$format}");
         }
     }
 
-    protected function createJamFile(int $year, string $title, string $topic, string $startDate, string $endDate, int $hours): void
+    protected function withTimezone(string $dateTime): string
     {
-        $data = [
+        return (string) \HagenbergJams\JamEngine\JamSchedule::parse($dateTime)?->toIso8601String();
+    }
+
+    protected function createJamFile(int $year, string $title, string $topic, string $startDate, string $endDate, int $hours, string $topicRelease = ''): void
+    {
+        $data = array_filter([
             'title' => $title,
             'topic' => $topic,
             'startdate' => $startDate,
             'enddate' => $endDate,
+            'topic_release' => $topicRelease,
             'hours' => $hours,
-        ];
+        ], fn(mixed $value): bool => $value !== '');
 
         $file = base_path("_data/jams/{$year}.yaml");
         $dir = dirname($file);

@@ -227,11 +227,16 @@
                     @endphp
                     <div class="swiper-slide">
                         <div class="flex justify-center items-center h-32">
-                            <a href="{{ $sponsor['url'] ?? '#' }}" target="_blank"
+                            @if(!empty($sponsor['url']))
+                            <a href="{{ $sponsor['url'] }}" target="_blank"
                                class="opacity-100 hover:opacity-70 transition-opacity">
                                 <img src="{{ $logoSrc }}" alt="{{ $sponsor['name'] ?? 'Sponsor' }}"
                                      width="{{ $logoWidth }}" height="{{ $logoHeight }}" class="h-16 object-contain">
                             </a>
+                            @else
+                            <img src="{{ $logoSrc }}" alt="{{ $sponsor['name'] ?? 'Sponsor' }}"
+                                 width="{{ $logoWidth }}" height="{{ $logoHeight }}" class="h-16 object-contain">
+                            @endif
                         </div>
                     </div>
                 @endforeach

@@ -477,12 +477,11 @@ class AddProjectCommand extends Command
             return 'no';
         }
 
-        $placement = $this->ask('Placement (e.g., "1st", "2nd", "3rd", or leave empty for just "yes")', '');
-        if (empty($placement) || !is_string($placement)) {
-            return 'yes';
-        }
+        $awards = config('jam.awards', []);
+        $available = is_array($awards) ? implode(', ', array_keys($awards)) : '';
+        $award = $this->ask("Awards, comma-separated ({$available})", '');
 
-        return $placement;
+        return is_string($award) && $award !== '' ? $award : 'no';
     }
 
     /**
