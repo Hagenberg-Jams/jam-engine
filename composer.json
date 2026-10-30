@@ -2,6 +2,7 @@
     "name": "hagenberg-jams/jam-engine",
     "description": "Reusable HydePHP engine for Hagenberg jam websites.",
     "type": "library",
+    "license": "MIT",
     "require": {
         "php": "^8.2",
         "aws/aws-sdk-php": "^3.394",
