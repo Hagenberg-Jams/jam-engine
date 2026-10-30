@@ -45,16 +45,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sponsors slider with Swiper
     const sponsorsSlider = document.querySelector('.sponsors-slider');
     if (sponsorsSlider) {
+        // With only a few sponsors there is nothing to slide, so they stay in the centre.
+        const hasEnoughSponsors = sponsorsSlider.querySelectorAll('.swiper-slide').length > 3;
+
         new Swiper('.sponsors-slider', {
             modules: [Autoplay],
             slidesPerView: 3,
             spaceBetween: 40,
-            loop: true,
+            loop: hasEnoughSponsors,
             centeredSlides: false,
-            autoplay: {
+            centerInsufficientSlides: true,
+            autoplay: hasEnoughSponsors ? {
                 delay: 3000,
                 disableOnInteraction: false,
-            },
+            } : false,
             breakpoints: {
                 1024: {
                     slidesPerView: 3,

@@ -32,7 +32,9 @@ it('uses its own labels and awards', function (): void {
 });
 
 it('shows a clean page for a year without projects', function (): void {
-    expect(page($GLOBALS['animationSite'], '2026.html'))->toContain('No animations have been published for this year yet.');
+    expect(page($GLOBALS['animationSite'], '2026.html'))
+        ->toContain('No animations have been published for this year yet.')
+        ->not->toContain('id="project-search-input"');
 });
 
 it('does not offer projects of a year without any', function (): void {

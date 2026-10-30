@@ -22,9 +22,9 @@ module.exports = {
                             marginTop: '1.5em',
                         },
                         a: {
-                            color: '#5956eb',
+                            color: 'var(--jam-primary-500, #5956eb)',
                             '&:hover': {
-                                color: '#4f46e5',
+                                color: 'var(--jam-primary-600, #4f46e5)',
                             },
                             textDecoration: 'none'
                         },
@@ -86,9 +86,9 @@ module.exports = {
                 invert: {
                     css: {
                         a: {
-                            color: '#818cf8',
+                            color: 'var(--jam-primary-400, #818cf8)',
                             '&:hover': {
-                                color: '#6366f1',
+                                color: 'var(--jam-primary-300, #6366f1)',
                             },
                         },
                     },

@@ -15,6 +15,7 @@ return [
         'latest_cta' => 'View the games of',
         'vote_cta' => 'Vote for the games of',
         'meta_verb' => 'Play',
+        'search_placeholder' => 'Search games or teams…',
     ],
 
     'project' => [

@@ -74,6 +74,7 @@ return [
         'latest_cta' => 'View the projects of',
         'vote_cta' => 'Vote for the projects of',
         'meta_verb' => 'See',
+        'search_placeholder' => 'Search name or team…',
     ],
 
     'project' => [

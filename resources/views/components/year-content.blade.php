@@ -40,6 +40,7 @@
 </section>
 
 <!-- Filter Buttons -->
+@if(count($projects) > 0)
 <section class="py-8 bg-gray-200 dark:bg-gray-800" aria-labelledby="filter-heading">
     <h2 id="filter-heading" class="sr-only">Filter {{ config('jam.labels.projects_lower') }}</h2>
     <div class="container mx-auto px-4">
@@ -53,7 +54,7 @@
                 <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filter:</span>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-4">
-                <input type="search" id="project-search-input" placeholder="Search {{ config('jam.labels.projects_lower') }} or teams…"
+                <input type="search" id="project-search-input" placeholder="{{ config('jam.labels.search_placeholder') }}"
                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                        aria-label="Search {{ config('jam.labels.projects_lower') }} or teams by name">
                 <button type="button" id="project-search-clear" class="clear-filter-btn px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
@@ -75,6 +76,7 @@
         </div>
     </div>
 </section>
+@endif
 
 <!-- Winners Section -->
 @php

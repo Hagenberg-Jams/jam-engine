@@ -25,7 +25,8 @@ it('renders the filters, cards and awards on the year page', function (): void {
     expect($html)->toContain('data-filter=".singleplayer"')
         ->toContain('project-card multiplayer keyboard gamepad')
         ->toContain('Jury Award')
-        ->toContain('Details and Download');
+        ->toContain('Details and Download')
+        ->toContain('placeholder="Search games or teams…"');
 });
 
 it('does not announce a jam when none is upcoming', function (): void {
