@@ -1,0 +1,50 @@
+{
+    "name": "hagenberg-jams/jam-engine",
+    "description": "Reusable HydePHP engine for Hagenberg jam websites.",
+    "type": "library",
+    "require": {
+        "php": "^8.2",
+        "aws/aws-sdk-php": "^3.394",
+        "dompdf/dompdf": "^3.1",
+        "hyde/framework": "^2.0",
+        "laravel-zero/framework": "^11.0",
+        "symfony/yaml": "^7.4"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.11",
+        "laravel/pint": "^1.31",
+        "phpstan/phpstan": "^2.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "HagenbergJams\\JamEngine\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "HagenbergJams\\JamEngine\\JamEngineServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "lint": [
+            "pint --test"
+        ],
+        "lint:fix": [
+            "pint"
+        ],
+        "analyse": [
+            "phpstan analyse --memory-limit=2G"
+        ],
+        "test": [
+            "@lint",
+            "@analyse"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

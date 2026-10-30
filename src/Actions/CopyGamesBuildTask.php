@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Actions;
-
-use App\GameJamData;
+namespace HagenbergJams\JamEngine\Actions;
 
 use function copy;
 use function file_exists;
 use function glob;
+
+use HagenbergJams\JamEngine\GameJamData;
+
 use function hash_file;
 
 use Hyde\Framework\Concerns\InteractsWithDirectories;

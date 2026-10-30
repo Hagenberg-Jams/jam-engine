@@ -3,7 +3,7 @@
 @section('content')
 @php
     $persons = $persons ?? [];
-    $totalJams = count(\App\GameJamData::getAvailableYears());
+    $totalJams = count(\HagenbergJams\JamEngine\GameJamData::getAvailableYears());
 @endphp
 
 <!-- Page Header -->

@@ -1,10 +1,6 @@
-includes:
-    - phpstan-baseline.neon
-
 parameters:
     paths:
-        - app
-        - config
+        - src
 
     # Rule level: 0 is the loosest and 9 is the strictest
     level: 9
@@ -13,11 +9,3 @@ parameters:
     tmpDir: .phpstan
 
     treatPhpDocTypesAsCertain: false
-
-    excludePaths:
-        - vendor
-        - _site
-        - node_modules
-        - storage (?)
-        - bootstrap (?)
-        - app/storage

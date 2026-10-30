@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\PreBuildTasks;
+namespace HagenbergJams\JamEngine\Actions\PreBuildTasks;
 
-use App\Services\OptimizeImagesService;
+use HagenbergJams\JamEngine\Services\OptimizeImagesService;
 use Hyde\Framework\Actions\PreBuildTasks\TransferMediaAssets as BaseTransferMediaAssets;
 
 /**

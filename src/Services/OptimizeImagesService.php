@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace HagenbergJams\JamEngine\Services;
 
 use function exec;
 use function file_exists;

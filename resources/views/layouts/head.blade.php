@@ -56,7 +56,7 @@
         'games' => $games ?? null,
     ];
     
-    $ogMeta = (new \App\Helpers\OpenGraphMeta())->getMetaTags($ogContext);
+    $ogMeta = (new \HagenbergJams\JamEngine\Helpers\OpenGraphMeta())->getMetaTags($ogContext);
 @endphp
 
 {{-- Meta Description (separate from OG for better SEO) --}}

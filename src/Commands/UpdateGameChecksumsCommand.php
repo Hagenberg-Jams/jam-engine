@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands;
+namespace HagenbergJams\JamEngine\Commands;
 
 use function file_exists;
 use function file_put_contents;

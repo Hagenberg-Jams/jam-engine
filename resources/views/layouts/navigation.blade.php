@@ -2,7 +2,7 @@
     use Hyde\Framework\Features\Navigation\NavigationItem;
 
     $latestJam = (string) config('gamejam.latest_jam', '2024');
-    $archiveYears = array_values(array_filter(\App\GameJamData::getAvailableYears(), fn (int $y) => (string) $y !== $latestJam));
+    $archiveYears = array_values(array_filter(\HagenbergJams\JamEngine\GameJamData::getAvailableYears(), fn (int $y) => (string) $y !== $latestJam));
     rsort($archiveYears);
     
     // Group years by decade

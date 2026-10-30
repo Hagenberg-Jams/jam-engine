@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Commands;
+namespace HagenbergJams\JamEngine\Commands;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -118,7 +118,7 @@ class PrintGameSheetsCommand extends Command
     /**
      * Generate PDF for a single game
      *
-     * @param array<string, mixed> $entry
+     * @param array<mixed> $entry Parsed from YAML, not validated
      */
     protected function generatePdf(int $year, array $entry, string $outputDir): string
     {

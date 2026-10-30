@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Actions;
-
-use App\GameJamData;
+namespace HagenbergJams\JamEngine\Actions;
 
 use function array_filter;
 use function array_map;
 use function glob;
 
+use HagenbergJams\JamEngine\GameJamData;
 use Hyde\Framework\Features\BuildTasks\PreBuildTask;
 use Hyde\Hyde;
 use Hyde\Pages\InMemoryPage;

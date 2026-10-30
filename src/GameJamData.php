@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace HagenbergJams\JamEngine;
 
 /**
  * Helper class to load Game Jam data from YAML files

@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Commands;
-
-use App\GameJamData;
+namespace HagenbergJams\JamEngine\Commands;
 
 use function file_exists;
 use function file_put_contents;
 
+use HagenbergJams\JamEngine\GameJamData;
 use Illuminate\Console\Command;
 
 use function mkdir;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Helpers;
+namespace HagenbergJams\JamEngine\Helpers;
 
-use App\GameJamData;
+use HagenbergJams\JamEngine\GameJamData;
 
 class OpenGraphMeta
 {
