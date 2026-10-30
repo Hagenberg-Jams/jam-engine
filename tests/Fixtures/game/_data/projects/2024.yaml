@@ -1,0 +1,7 @@
+- project:
+    name: 'Old Game'
+    players: 1
+    controls: [keyboard]
+    description: 'Older.'
+  team: { name: 'Old Team', members: ['Ann Example'] }
+  winner: no

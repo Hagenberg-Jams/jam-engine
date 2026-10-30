@@ -1,0 +1,8 @@
+- project:
+    name: 'Short Film'
+    description: 'An animated short.'
+    videos:
+      - { youtube: aaaaaaaaaaa, title: 'Final Cut' }
+      - { youtube: bbbbbbbbbbb, title: 'Making Of' }
+  team: { name: 'Pixels', members: ['Ann Example'] }
+  winner: sound

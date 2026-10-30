@@ -14,6 +14,7 @@ use HagenbergJams\JamEngine\Actions\PreBuildTasks\TransferMediaAssets;
 use HagenbergJams\JamEngine\Actions\PrepareFunctionsBuildTask;
 use HagenbergJams\JamEngine\Commands\AddProjectCommand;
 use HagenbergJams\JamEngine\Commands\AddSponsorCommand;
+use HagenbergJams\JamEngine\Commands\CheckLinksCommand;
 use HagenbergJams\JamEngine\Commands\ConvertImagesCommand;
 use HagenbergJams\JamEngine\Commands\CreateJamCommand;
 use HagenbergJams\JamEngine\Commands\MigrateDataCommand;
@@ -63,6 +64,7 @@ class JamEngineServiceProvider extends ServiceProvider
             $this->commands([
                 AddProjectCommand::class,
                 AddSponsorCommand::class,
+                CheckLinksCommand::class,
                 ConvertImagesCommand::class,
                 CreateJamCommand::class,
                 MigrateDataCommand::class,

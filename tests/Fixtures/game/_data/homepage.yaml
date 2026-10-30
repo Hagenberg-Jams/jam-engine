@@ -1,0 +1,5 @@
+hero: { title: 'Test Game Jam', description: 'A test.', images: [] }
+highlights:
+  - { icon: clock, title: '36 Hours', text: 'Quick.' }
+about: { title: 'About it', markdown: 'Some **text**.' }
+video: { youtube_id: abcdefghijk, title: 'Intro' }

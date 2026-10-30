@@ -1,0 +1,4 @@
+hero: { title: 'Test Animation Jam', description: 'A test.', images: [] }
+highlights:
+  - { icon: document, title: '1 Topic', text: 'One.' }
+about: { title: 'About it', markdown: 'Some text.' }

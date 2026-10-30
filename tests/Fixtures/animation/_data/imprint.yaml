@@ -1,0 +1,2 @@
+legal: { name: 'Test Org', address: ['Street 1'] }
+responsible: { name: 'Test Dept', address: ['Street 1'] }

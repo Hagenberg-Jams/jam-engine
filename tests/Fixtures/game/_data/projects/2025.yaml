@@ -1,0 +1,10 @@
+- project:
+    name: 'Space Game'
+    players: '2-4'
+    controls: [keyboard, gamepad]
+    controls_text: 'Move: WASD'
+    description: 'A game in space.'
+  team: { name: 'Rockets', members: ['Ann Example', 'Bo Tester'] }
+  winner: jury
+  download:
+    - { file: space-game-Windows.zip, platform: Windows }

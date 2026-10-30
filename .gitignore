@@ -3,3 +3,6 @@
 /composer.lock
 /.phpstan
 /.claude
+/tests/browser/.build
+/test-results
+/playwright-report

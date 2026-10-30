@@ -14,6 +14,7 @@
     "require-dev": {
         "larastan/larastan": "^3.11",
         "laravel/pint": "^1.31",
+        "pestphp/pest": "^4.0",
         "phpstan/phpstan": "^2.2"
     },
     "autoload": {
@@ -40,11 +41,15 @@
         ],
         "test": [
             "@lint",
-            "@analyse"
+            "@analyse",
+            "pest"
         ]
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

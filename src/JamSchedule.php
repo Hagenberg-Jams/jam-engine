@@ -97,6 +97,18 @@ class JamSchedule
     }
 
     /**
+     * YAML turns an unquoted date without a time into midnight UTC.
+     */
+    protected static function hasTimeOfDay(mixed $value): bool
+    {
+        if (is_int($value)) {
+            return $value % 86400 !== 0;
+        }
+
+        return is_string($value) && str_contains($value, ':');
+    }
+
+    /**
      * For example "21–22 November 2026, 09:00–21:00" or "30 November – 1 December 2026".
      *
      * @param array<mixed> $jam
@@ -118,8 +130,7 @@ class JamSchedule
             $dates = $start->format('j F') . ' – ' . $end->format('j F Y');
         }
 
-        // Dates without a time of day carry no useful time information.
-        if ($end !== null && is_string($jam['startdate'] ?? null) && str_contains($jam['startdate'], ':')) {
+        if ($end !== null && self::hasTimeOfDay($jam['startdate'] ?? null)) {
             $dates .= ', ' . $start->format('H:i') . '–' . $end->format('H:i');
         }
 

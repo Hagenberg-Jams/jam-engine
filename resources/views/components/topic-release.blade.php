@@ -85,6 +85,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         show(data);
                     } else if (Date.now() + clockOffset >= release) {
                         setTimeout(askServer, retryDelay);
+                    } else if (timer === null) {
+                        // The local clock ran ahead, so the countdown continues with the server time.
+                        startCountdown();
                     }
                 });
             })
@@ -107,6 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (remaining <= 0) {
             clearInterval(timer);
+            timer = null;
             countdown.querySelectorAll('[data-unit]').forEach(function (element) {
                 element.textContent = '00';
             });
@@ -127,8 +131,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    timer = setInterval(tick, 1000);
-    tick();
+    function startCountdown() {
+        timer = setInterval(tick, 1000);
+        tick();
+    }
+
+    startCountdown();
     // Corrects a wrong local clock, and reveals the topic if this page was built before the release.
     askServer();
 });
