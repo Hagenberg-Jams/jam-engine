@@ -18,11 +18,13 @@ jobs:
           coverage: none
       - name: Install ImageMagick 7 for the image commands
         run: |
-          curl -fsSL -o magick https://imagemagick.org/archive/binaries/magick
+          gh release download -R ImageMagick/ImageMagick -p '*-gcc-x86_64.AppImage' -O magick
           chmod +x magick
           sudo mv magick /usr/local/bin/magick
           echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
           APPIMAGE_EXTRACT_AND_RUN=1 magick -version
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: composer install --no-interaction --no-progress
       - run: composer lint
       - run: composer analyse
