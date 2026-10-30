@@ -107,4 +107,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           URL: ${{ steps.wrangler.outputs.url }}
           PR: ${{ github.event.pull_request.number }}
-        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "Preview of this pull request: $URL"
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "Preview of this pull request: $URL"

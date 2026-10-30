@@ -75,6 +75,9 @@ on:
   workflow_dispatch:
 jobs:
   site:
+    permissions:
+      contents: read
+      pull-requests: write
     uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@main
     with:
       project-name: my-jam
