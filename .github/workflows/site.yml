@@ -85,9 +85,12 @@ jobs:
           PROJECT: ${{ inputs.project-name }}
           JAM_TOPIC: ${{ secrets.JAM_TOPIC }}
           JAM_TOPIC_VIDEO: ${{ secrets.JAM_TOPIC_VIDEO }}
+        # One secret with the year of the jam, so that topic and video are replaced together
+        # and a secret left over from an earlier jam is never shown.
         run: |
-          if [ -n "$JAM_TOPIC" ]; then printf '%s' "$JAM_TOPIC" | npx --yes wrangler@4 pages secret put JAM_TOPIC --project-name="$PROJECT"; fi
-          if [ -n "$JAM_TOPIC_VIDEO" ]; then printf '%s' "$JAM_TOPIC_VIDEO" | npx --yes wrangler@4 pages secret put JAM_TOPIC_VIDEO --project-name="$PROJECT"; fi
+          if [ -z "$JAM_TOPIC" ]; then exit 0; fi
+          if [ ! -f functions/api/_topic-config.json ]; then echo "::warning::JAM_TOPIC is set, but no jam has a topic release."; exit 0; fi
+          node -e 'const { year } = require("./functions/api/_topic-config.json"); process.stdout.write(JSON.stringify({ year, topic: process.env.JAM_TOPIC, video: process.env.JAM_TOPIC_VIDEO || null }))'             | npx --yes wrangler@4 pages secret put JAM_TOPIC_DATA --project-name="$PROJECT"
 
       - name: Deploy
         if: steps.deploy.outputs.enabled == 'true'

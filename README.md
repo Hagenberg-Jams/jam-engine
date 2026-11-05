@@ -58,7 +58,7 @@ enddate: '2026-11-22T21:00:00+01:00'
 topic_release: '2026-11-20T18:00:00+01:00'
 ```
 
-Store the topic as the GitHub secret `JAM_TOPIC`, and optionally a YouTube ID as `JAM_TOPIC_VIDEO`. The next deployment transfers them to Cloudflare. The page shows a countdown, and a Pages Function hands out the topic from the release time on. After the jam, add the topic to the YAML file as `topic:`.
+Store the topic as the GitHub secret `JAM_TOPIC`, and optionally a YouTube ID as `JAM_TOPIC_VIDEO`. The next deployment from `main` transfers both to Cloudflare as one secret, `JAM_TOPIC_DATA`, together with the year of the jam. The function ignores a topic for any other year, so a secret left over from an earlier jam never needs to be deleted in Cloudflare. The page shows a countdown, and a Pages Function hands out the topic from the release time on. After the jam, add the topic to the YAML file as `topic:`.
 
 To set, change or remove the time later, use the command. It only changes the `topic_release` line:
 
