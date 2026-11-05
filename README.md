@@ -60,6 +60,14 @@ topic_release: '2026-11-20T18:00:00+01:00'
 
 Store the topic as the GitHub secret `JAM_TOPIC`, and optionally a YouTube ID as `JAM_TOPIC_VIDEO`. The next deployment transfers them to Cloudflare. The page shows a countdown, and a Pages Function hands out the topic from the release time on. After the jam, add the topic to the YAML file as `topic:`.
 
+To set, change or remove the time later, use the command. It only changes the `topic_release` line:
+
+```bash
+php hyde jam:topic-release 2026-11-20 19:00        # newest jam
+php hyde jam:topic-release 2026-11-20 19:00 --year=2026
+php hyde jam:topic-release --remove
+```
+
 The build fails if `topic:` is in the YAML file before the release time.
 
 ## Deployment
@@ -89,7 +97,7 @@ The daily run removes past events from the home page and writes a released topic
 
 ## Commands
 
-`jam:create-jam`, `jam:add-project`, `jam:add-sponsor`, `jam:remove-sponsor`, `jam:validate`, `jam:check-links`, `jam:migrate-data`, `jam:print`, `jam:sync-r2`, `jam:update-checksums` and `jam:convert-images`.
+`jam:create-jam`, `jam:topic-release`, `jam:add-project`, `jam:add-sponsor`, `jam:remove-sponsor`, `jam:validate`, `jam:check-links`, `jam:migrate-data`, `jam:print`, `jam:sync-r2`, `jam:update-checksums` and `jam:convert-images`.
 
 ## Development
 

@@ -74,3 +74,46 @@ it('adds an animation with videos and without game fields', function (): void {
         ->and(file_exists("{$site}/_media/2025/new-film_header.webp"))->toBeTrue()
         ->and(runHyde($site, 'jam:validate')->getExitCode())->toBe(0);
 })->skip(fn(): bool => !magickAvailable(), 'ImageMagick (magick) is not installed');
+
+it('changes the topic release and keeps the other fields', function (): void {
+    $site = fixtureCopy('animation');
+    $process = runHyde($site, 'jam:topic-release 2026-11-20 19:00');
+    $jam = (string) file_get_contents("{$site}/_data/jams/2026.yaml");
+
+    expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
+        ->and($jam)->toContain("topic_release: '2026-11-20T19:00:00+01:00'")
+        ->toContain("startdate: '2026-11-21T09:00:00+01:00'")
+        ->and(substr_count($jam, 'topic_release'))->toBe(1)
+        ->and(runHyde($site, 'jam:validate')->getExitCode())->toBe(0);
+});
+
+it('adds and removes a topic release', function (): void {
+    $site = fixtureCopy('animation');
+    file_put_contents("{$site}/_data/jams/2027.yaml", "title: '2027'\nstartdate: '2027-11-20T09:00:00+01:00'\n");
+
+    $added = runWithInput($site, 'jam:topic-release', ['2027-11-19 18:00']);
+    $jam = (string) file_get_contents("{$site}/_data/jams/2027.yaml");
+
+    expect($added->getExitCode())->toBe(0, $added->getOutput() . $added->getErrorOutput())
+        ->and($jam)->toContain("topic_release: '2027-11-19T18:00:00+01:00'");
+
+    $removed = runHyde($site, 'jam:topic-release --year=2027 --remove');
+
+    expect($removed->getExitCode())->toBe(0)
+        ->and((string) file_get_contents("{$site}/_data/jams/2027.yaml"))->not->toContain('topic_release');
+});
+
+it('refuses a future topic release while the topic is in the file', function (): void {
+    $site = fixtureCopy('animation');
+    $process = runHyde($site, 'jam:topic-release 2026-12-01 18:00 --year=2025');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and((string) file_get_contents("{$site}/_data/jams/2025.yaml"))->not->toContain('topic_release');
+});
+
+it('rejects a malformed topic release', function (): void {
+    $site = fixtureCopy('animation');
+
+    expect(runHyde($site, 'jam:topic-release 20.11.2026')->getExitCode())->toBe(1)
+        ->and((string) file_get_contents("{$site}/_data/jams/2026.yaml"))->toContain("topic_release: '2026-11-20T18:00:00+01:00'");
+});

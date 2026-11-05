@@ -21,6 +21,7 @@ use HagenbergJams\JamEngine\Commands\MigrateDataCommand;
 use HagenbergJams\JamEngine\Commands\PrintProjectSheetsCommand;
 use HagenbergJams\JamEngine\Commands\RemoveSponsorCommand;
 use HagenbergJams\JamEngine\Commands\SyncR2Command;
+use HagenbergJams\JamEngine\Commands\TopicReleaseCommand;
 use HagenbergJams\JamEngine\Commands\UpdateChecksumsCommand;
 use HagenbergJams\JamEngine\Commands\ValidateCommand;
 use Illuminate\Support\Facades\View;
@@ -71,6 +72,7 @@ class JamEngineServiceProvider extends ServiceProvider
                 PrintProjectSheetsCommand::class,
                 RemoveSponsorCommand::class,
                 SyncR2Command::class,
+                TopicReleaseCommand::class,
                 UpdateChecksumsCommand::class,
                 ValidateCommand::class,
             ]);
