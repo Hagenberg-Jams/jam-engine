@@ -34,6 +34,18 @@ it('creates a jam with a known topic', function (): void {
         ->and(file_exists("{$site}/_data/projects/2027.yaml"))->toBeTrue();
 });
 
+it('makes the new jam the latest one, unless asked to keep the latest jam', function (): void {
+    $site = fixtureCopy('game');
+    $input = ['2027', '2027', '2027-12-10 18:00', '2027-12-11 09:00', '2027-12-12 21:00', '36'];
+
+    expect(runWithInput($site, 'jam:create-jam --keep-latest', $input)->getExitCode())->toBe(0)
+        ->and(file_get_contents("{$site}/config/jam.php"))->toContain("'latest_jam' => '2025'");
+
+    unlink("{$site}/_data/jams/2027.yaml");
+    expect(runWithInput($site, 'jam:create-jam', $input)->getExitCode())->toBe(0)
+        ->and(file_get_contents("{$site}/config/jam.php"))->toContain("'latest_jam' => '2027'");
+});
+
 it('never writes the topic of a jam with a topic release', function (): void {
     $site = fixtureCopy('animation');
     $process = runWithInput($site, 'jam:create-jam', ['2027', '2027', '2027-11-19 18:00', '2027-11-20 09:00', '2027-11-21 21:00', '36']);

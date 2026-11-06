@@ -25,7 +25,7 @@ class CreateJamCommand extends Command
     /** @var array<int, string> */
     protected $aliases = ['gamejam:create-jam'];
 
-    protected $signature = 'jam:create-jam';
+    protected $signature = 'jam:create-jam {--keep-latest : Keep latest_jam as it is, for example until the new jam has projects}';
 
     protected $description = 'Create a new jam year with metadata files';
 
@@ -207,7 +207,7 @@ class CreateJamCommand extends Command
         $highestYear = max($allYears);
 
         // Only update latest_jam if the new year is the highest
-        if ($year < $highestYear) {
+        if ($year < $highestYear || $this->option('keep-latest')) {
             $this->info("Year {$year} is not the latest. Latest year is {$highestYear}. Not updating latest_jam.");
             // Still update Hyde config exclude list
             $this->updateHydeConfig($year);
@@ -227,15 +227,21 @@ class CreateJamCommand extends Command
             return;
         }
 
-        // Update latest_jam only if this is the highest year
-        $content = preg_replace(
-            "/('latest_jam' => env\\('[A-Z_]+', )'\\d+'\\),/",
-            "\$1'{$year}'),",
+        // Update latest_jam only if this is the highest year. It is either a plain year or env('NAME', 'year').
+        $updated = preg_replace(
+            "/('latest_jam' => (?:env\\('[A-Z_]+', )?)'\\d+'/",
+            "\${1}'{$year}'",
             $content,
+            1,
+            $count,
         );
 
-        file_put_contents($configFile, $content);
-        $this->info("Updated config/jam.php: latest_jam = {$year} (highest year)");
+        if ($updated === null || $count === 0) {
+            $this->warn("Could not find latest_jam in config/jam.php. Set it to '{$year}' by hand.");
+        } else {
+            file_put_contents($configFile, $updated);
+            $this->info("Updated config/jam.php: latest_jam = {$year} (highest year)");
+        }
 
         // Update Hyde config
         $this->updateHydeConfig($year);
