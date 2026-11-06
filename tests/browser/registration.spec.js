@@ -142,6 +142,8 @@ test('lists registrations for the organisers and confirms one', async ({ page })
     await expect(page.locator('#admin-list')).toContainText('Next on the waiting list, and 6 seats are free.');
     await expect(page.locator('#admin-summary')).toContainText('waiting for a seat');
 
+    await expect(page.locator('#admin-list article').first().getByRole('button', { name: 'Delete' })).toBeDisabled();
+
     await page.locator('#admin-list article').first().getByRole('button', { name: 'Confirm' }).click();
     await expect.poll(() => actions.length).toBe(1);
     expect(actions[0]).toEqual({ action: 'confirm', id: 'a', notify: true });

@@ -6,7 +6,8 @@
 
 @section('content')
 @php
-    $button = 'px-3 py-1 rounded border text-sm';
+    $button = 'px-3 py-1 rounded border text-sm cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 '
+        . 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent';
 @endphp
 
 <section class="bg-primary-600 text-white py-12">
@@ -126,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(body)
         }).then(function (response) {
+            if (response.status === 409) { throw new Error('decline the team first'); }
             if (!response.ok) { throw new Error(response.status); }
             load();
         }).catch(function (error) { fail('The change failed (' + error.message + ').'); });
@@ -188,13 +190,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 actions.appendChild(button);
                 return button;
             };
-            if (registration.status !== 'confirmed') { add('Confirm', { action: 'confirm' }, 'border-green-700 text-green-800 dark:text-green-300'); }
-            if (registration.status !== 'declined') { add('Decline', { action: 'decline' }, 'border-red-700 text-red-800 dark:text-red-300'); }
+            var green = 'border-green-700 text-green-800 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 active:bg-green-100 dark:active:bg-green-900/50';
+            var red = 'border-red-700 text-red-800 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50';
+            if (registration.status !== 'confirmed') { add('Confirm', { action: 'confirm' }, green); }
+            if (registration.status !== 'declined') { add('Decline', { action: 'decline' }, red); }
             ['onsite', 'remote', 'waitlist'].forEach(function (placement) {
                 if (registration.placement !== placement) { add('Move to ' + label(placement).toLowerCase(), { action: 'place', placement: placement }); }
             });
-            var remove = element('button', '{{ $button }} border-red-700 ml-auto', 'Delete');
+            // Only declined or cancelled teams can be deleted, so that every team hears about it before.
+            var removable = registration.status === 'declined' || registration.status === 'cancelled';
+            var remove = element('button', '{{ $button }} ' + red + ' ml-auto', 'Delete');
             remove.type = 'button';
+            remove.disabled = !removable;
+            remove.title = removable ? 'Deletes the registration for good.' : 'Decline the team first. It gets a mail about it.';
             remove.addEventListener('click', function () {
                 if (remove.getAttribute('data-armed')) {
                     act(registration, { action: 'delete' });

@@ -448,6 +448,11 @@ export async function handleAdminAction(request, env, deps, config) {
     }
 
     if (input.action === 'delete') {
+        // A team must hear about it first, through the mail for a declined registration or its own cancellation.
+        if (!['declined', 'cancelled'].includes(registration.status)) {
+            return json(409, { error: 'not_declined' });
+        }
+
         await db.batch([
             db.prepare('DELETE FROM members WHERE registration_id = ?').bind(registration.id),
             db.prepare('DELETE FROM registrations WHERE id = ?').bind(registration.id),

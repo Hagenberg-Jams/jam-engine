@@ -361,7 +361,12 @@ describe('admin', () => {
         expect((await handleAdminAction(action({ id: 'nope', action: 'confirm' }), site, fakeDeps(), config)).status).toBe(404);
     });
 
-    it('deletes a registration with its members', async () => {
+    it('deletes a registration with its members, but only once it is declined', async () => {
+        const refused = await handleAdminAction(action({ id, action: 'delete' }), site, fakeDeps(), config);
+        expect(refused.status).toBe(409);
+        expect(site.JAM_DB.sqlite.prepare('SELECT COUNT(*) AS n FROM registrations').get().n).toBe(1);
+
+        await handleAdminAction(action({ id, action: 'decline', notify: false }), site, fakeDeps(), config);
         await handleAdminAction(action({ id, action: 'delete' }), site, fakeDeps(), config);
 
         expect(site.JAM_DB.sqlite.prepare('SELECT COUNT(*) AS n FROM members').get().n).toBe(0);
