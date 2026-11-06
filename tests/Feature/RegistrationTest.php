@@ -59,6 +59,12 @@ it('links the announcement to the form and explains the registration in the priv
         ->and($imprint)->toContain('id="registration"')->toContain('Cloudflare D1')->toContain('Discord usernames')->toContain('90 days');
 });
 
+it('passes the link check, which skips the function endpoints', function (): void {
+    $site = buildSite('animation', prepare: withRegistrationForm());
+
+    expect(runHyde($site, 'jam:check-links')->getExitCode())->toBe(0);
+});
+
 it('keeps the admin and edit pages out of the sitemap', function (): void {
     $sitemap = page(buildSite('animation', prepare: withRegistrationForm()), 'sitemap.xml');
 

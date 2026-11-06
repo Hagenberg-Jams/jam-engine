@@ -36,6 +36,11 @@ class CheckLinksCommand extends Command
             preg_match_all('/(?:href|src)="(\/[^"\/][^"]*|\/)"/', (string) file_get_contents($file->getPathname()), $matches);
 
             foreach (array_unique($matches[1]) as $link) {
+                // Pages Functions answer these at runtime, so there is no file to find.
+                if (str_starts_with($link, '/api/')) {
+                    continue;
+                }
+
                 $checked++;
                 if (!$this->exists($site, $link)) {
                     $broken[] = substr($file->getPathname(), strlen($site) + 1) . ": {$link}";
