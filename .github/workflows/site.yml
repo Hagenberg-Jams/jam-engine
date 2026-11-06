@@ -26,6 +26,8 @@ on:
         required: false
       EMAIL_API_TOKEN:
         required: false
+      JAM_REGISTRATION_NOTIFY:
+        required: false
 
 jobs:
   build:
@@ -62,6 +64,7 @@ jobs:
         env:
           JAM_TOPIC: ${{ secrets.JAM_TOPIC }}
           JAM_TOPIC_VIDEO: ${{ secrets.JAM_TOPIC_VIDEO }}
+          JAM_REGISTRATION_NOTIFY: ${{ secrets.JAM_REGISTRATION_NOTIFY }}
 
       - run: php hyde jam:check-links
 

@@ -42,6 +42,14 @@ it('builds the form, the edit page and the admin page with the functions', funct
         ->and($config['fields'])->toMatchArray(['discord' => true, 'programs' => true, 'participation' => true]);
 });
 
+it('adds organisers from the secret to the ones in the config', function (): void {
+    $site = buildSite('animation', env: ['JAM_REGISTRATION_NOTIFY' => ' private@example.test, orga@example.test ,'], prepare: withRegistrationForm());
+    $config = json_decode((string) file_get_contents("{$site}/functions/api/_registration-config.json"), true);
+
+    expect($config['notify'])->toBe(['orga@example.test', 'private@example.test'])
+        ->and(page($site, 'register.html'))->not->toContain('private@example.test');
+});
+
 it('links the announcement to the form and explains the registration in the privacy section', function (): void {
     $site = buildSite('animation', prepare: withRegistrationForm());
     $index = page($site, 'index.html');

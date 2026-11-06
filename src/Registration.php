@@ -78,7 +78,7 @@ class Registration
             'capacity' => is_numeric($capacity) ? (int) $capacity : null,
             'fields' => array_map(fn(mixed $value): bool => (bool) $value, (array) ($form['fields'] ?? [])),
             'programs' => array_values((array) ($form['programs'] ?? [])),
-            'notify' => array_values((array) ($form['notify'] ?? [])),
+            'notify' => self::notify((array) ($form['notify'] ?? [])),
             'from' => self::string($form['from'] ?? ''),
             'replyTo' => self::string(config('jam.email')),
             'purgeAfter' => self::purgeAfter($year)->toIso8601String(),
@@ -88,6 +88,21 @@ class Registration
             ],
             'texts' => (array) ($form['texts'] ?? []),
         ];
+    }
+
+    /**
+     * Organisers to notify: from the config, and from the secret JAM_REGISTRATION_NOTIFY, so that
+     * private addresses do not have to be in the public repository. Comma-separated.
+     *
+     * @param array<mixed> $configured
+     * @return array<int, string>
+     */
+    protected static function notify(array $configured): array
+    {
+        $secret = explode(',', self::string(env('JAM_REGISTRATION_NOTIFY', '')));
+        $addresses = array_map(fn(mixed $address): string => trim(self::string($address)), [...$configured, ...$secret]);
+
+        return array_values(array_unique(array_filter($addresses, fn(string $address): bool => $address !== '')));
     }
 
     protected static function string(mixed $value): string

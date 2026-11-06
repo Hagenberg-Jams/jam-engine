@@ -100,6 +100,7 @@ With `registration.form.enabled`, a site gets a registration form at `/register`
 - **Seats:** Seats on site go out in the order of registration. A team that does not fit goes to the waiting list or takes part remotely, depending on its wish. Organisers can move teams in the admin page.
 - **Exports:** The admin page exports a CSV with real names, for example for the security staff, and `teams-YYYY.json` with team names and shown names only. Put that file in `_input/`, and `jam:add-project` offers the teams.
 - **Deletion:** Every run of the site workflow deletes registrations whose jam ended more than `retention_days` ago.
+- **Organisers:** `notify` lists addresses that get a mail for each new, changed or cancelled registration. To keep private addresses out of the public repository, put them comma-separated in the GitHub secret `JAM_REGISTRATION_NOTIFY` instead.
 - **Privacy:** The imprint gets a section on the registration, linked from the form. Check it for your organisation.
 
 ### Cloudflare setup
