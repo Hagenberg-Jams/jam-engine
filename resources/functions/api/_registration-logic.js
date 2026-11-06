@@ -76,10 +76,11 @@ export function validate(input, config) {
             nickname: text(member?.nickname, 60),
             show_as: member?.show_as === 'nick' ? 'nick' : 'real',
             discord: fields.discord ? text(member?.discord, 40) : '',
+            remote: member?.remote === true || data.wish === 'remote',
         };
 
         // Empty rows from the form are skipped, half-filled ones are errors.
-        if (entry.real_name === '' && entry.nickname === '' && entry.discord === '') {
+        if (entry.real_name === '' && entry.nickname === '' && entry.discord === '' && member?.remote !== true) {
             return;
         }
 
@@ -93,6 +94,8 @@ export function validate(input, config) {
 
         data.members.push(entry);
     });
+
+    data.onsite = data.members.filter((member) => !member.remote).length;
 
     const [min, max] = config.teamSize;
     if (data.members.length < min || data.members.length > max) {
@@ -111,13 +114,14 @@ export function validate(input, config) {
 }
 
 /**
- * The SQL expression that decides where a team goes, from its wish and the seats left on site.
- * Parameters: ?1 wish, ?2 people, ?3 capacity (or null), ?4 year, ?5 id of the registration to leave out.
+ * The SQL expression that decides where a team goes: from its people on site, the seats left, and its wish
+ * for the case that there are not enough seats.
+ * Parameters: ?1 wish, ?2 people on site, ?3 capacity (or null), ?4 year, ?5 id of the registration to leave out.
  */
 const PLACEMENT_SQL = `CASE
-    WHEN ?1 = 'remote' THEN 'remote'
+    WHEN ?2 = 0 THEN 'remote'
     WHEN ?3 IS NULL THEN 'onsite'
-    WHEN COALESCE((SELECT SUM(people) FROM registrations
+    WHEN COALESCE((SELECT SUM(onsite_people) FROM registrations
         WHERE year = ?4 AND id != ?5 AND placement = 'onsite' AND status IN ('pending', 'confirmed')), 0) + ?2 <= ?3 THEN 'onsite'
     WHEN ?1 = 'onsite_only' THEN 'waitlist'
     ELSE 'remote'
@@ -125,14 +129,14 @@ END`;
 
 function memberStatements(db, id, members) {
     return members.map((member, position) =>
-        db.prepare('INSERT INTO members (registration_id, position, real_name, nickname, show_as, discord) VALUES (?, ?, ?, ?, ?, ?)')
-            .bind(id, position, member.real_name, member.nickname, member.show_as, member.discord),
+        db.prepare('INSERT INTO members (registration_id, position, real_name, nickname, show_as, discord, remote) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .bind(id, position, member.real_name, member.nickname, member.show_as, member.discord, member.remote ? 1 : 0),
     );
 }
 
 export async function seatsTaken(db, year) {
     const row = await db.prepare(
-        "SELECT COALESCE(SUM(people), 0) AS taken FROM registrations WHERE year = ? AND placement = 'onsite' AND status IN ('pending', 'confirmed')",
+        "SELECT COALESCE(SUM(onsite_people), 0) AS taken FROM registrations WHERE year = ? AND placement = 'onsite' AND status IN ('pending', 'confirmed')",
     ).bind(year).first();
 
     return Number(row?.taken ?? 0);
@@ -147,7 +151,11 @@ export async function findRegistration(db, where, value) {
 
     const { results } = await db.prepare('SELECT * FROM members WHERE registration_id = ? ORDER BY position').bind(registration.id).all();
 
-    return { ...registration, programs: JSON.parse(registration.programs), members: results };
+    return {
+        ...registration,
+        programs: JSON.parse(registration.programs),
+        members: results.map((member) => ({ ...member, remote: Number(member.remote) === 1 })),
+    };
 }
 
 /** What a team sees about itself: everything except internal fields. */
@@ -172,8 +180,8 @@ async function verifyTurnstile(deps, env, token, ip) {
 // Mails
 
 const PLACEMENT_TEXT = {
-    onsite: 'You have a seat on site.',
-    remote: 'You take part remotely.',
+    onsite: 'Your team has seats on site for everyone who takes part on site.',
+    remote: 'Your team takes part remotely.',
     waitlist: 'You are on the waiting list for a seat on site. We let you know as soon as one becomes free.',
 };
 
@@ -183,7 +191,7 @@ function teamSummary(registration, config) {
     registration.members.forEach((member) => {
         const shown = displayName(member) === member.real_name ? '' : ` (shown as ${member.nickname})`;
         const discord = config.fields.discord && member.discord ? `, Discord: ${member.discord}` : '';
-        lines.push(`- ${member.real_name}${shown}${discord}`);
+        lines.push(`- ${member.real_name}${shown}${discord}${member.remote ? ', remote' : ''}`);
     });
 
     return lines.join('\n');
@@ -219,7 +227,7 @@ export function organiserMail(event, registration, config) {
 
     return {
         to: config.notify,
-        subject: `${verbs[event]}: ${registration.team_name} (${registration.people} people, ${registration.placement})`,
+        subject: `${verbs[event]}: ${registration.team_name} (${registration.people} people, ${registration.onsite_people} on site, ${registration.placement})`,
         text: `${verbs[event]} for the ${config.siteName} ${config.year}.\n\n${teamSummary(registration, config)}\nContact: ${registration.contact_email}\nPlacement: ${registration.placement}\n\nManage registrations: ${config.siteUrl}/admin/registrations`,
     };
 }
@@ -294,11 +302,12 @@ export async function handleCreate(request, env, deps, config) {
     const token = randomToken();
 
     await db.batch([
-        db.prepare(`INSERT INTO registrations (id, year, team_name, contact_email, programs, wish, placement, people, comment,
-                edit_token_hash, ip_hash, consent_at, created_at, updated_at, purge_after)
-            SELECT ?5, ?4, ?6, ?7, ?8, ?1, ${PLACEMENT_SQL}, ?2, ?9, ?10, ?11, ?12, ?12, ?12, ?13`)
-            .bind(data.wish, data.members.length, config.capacity, config.year, id, data.team_name, data.contact_email,
-                JSON.stringify(data.programs), data.comment, await sha256(token), ipHash, deps.now, Date.parse(config.purgeAfter)),
+        db.prepare(`INSERT INTO registrations (id, year, team_name, contact_email, programs, wish, placement, people, onsite_people,
+                comment, edit_token_hash, ip_hash, consent_at, created_at, updated_at, purge_after)
+            SELECT ?5, ?4, ?6, ?7, ?8, ?1, ${PLACEMENT_SQL}, ?14, ?2, ?9, ?10, ?11, ?12, ?12, ?12, ?13`)
+            .bind(data.wish, data.onsite, config.capacity, config.year, id, data.team_name, data.contact_email,
+                JSON.stringify(data.programs), data.comment, await sha256(token), ipHash, deps.now, Date.parse(config.purgeAfter),
+                data.members.length),
         ...memberStatements(db, id, data.members),
     ]);
 
@@ -348,15 +357,15 @@ export async function handleSelf(request, env, deps, config) {
         return json(422, { error: 'validation', fields: errors });
     }
 
-    // A team keeps its seat on site as long as it does not grow. Otherwise the seats are checked again.
-    const keepSeat = registration.placement === 'onsite' && data.wish !== 'remote' && data.members.length <= registration.people;
+    // A team keeps its seats on site as long as it does not bring more people. Otherwise the seats are checked again.
+    const keepSeat = registration.placement === 'onsite' && data.onsite > 0 && data.onsite <= registration.onsite_people;
     const placement = keepSeat ? "'onsite'" : PLACEMENT_SQL;
 
     await db.batch([
-        db.prepare(`UPDATE registrations SET team_name = ?6, contact_email = ?7, programs = ?8, wish = ?1, people = ?2, comment = ?9,
-                placement = ${placement}, updated_at = ?10 WHERE id = ?5`)
-            .bind(data.wish, data.members.length, config.capacity, config.year, registration.id, data.team_name, data.contact_email,
-                JSON.stringify(data.programs), data.comment, deps.now),
+        db.prepare(`UPDATE registrations SET team_name = ?6, contact_email = ?7, programs = ?8, wish = ?1, people = ?11,
+                onsite_people = ?2, comment = ?9, placement = ${placement}, updated_at = ?10 WHERE id = ?5`)
+            .bind(data.wish, data.onsite, config.capacity, config.year, registration.id, data.team_name, data.contact_email,
+                JSON.stringify(data.programs), data.comment, deps.now, data.members.length),
         db.prepare('DELETE FROM members WHERE registration_id = ?').bind(registration.id),
         ...memberStatements(db, registration.id, data.members),
     ]);
@@ -447,11 +456,12 @@ export async function handleAdminExport(url, env, config) {
     }
 
     const placement = url.searchParams.get('placement');
-    const rows = [['Team', 'Status', 'Placement', 'Real name', 'Shown as', 'Discord', 'Contact'].map(csvCell).join(',')];
+    const rows = [['Team', 'Status', 'Placement', 'Real name', 'Shown as', 'Remote', 'Discord', 'Contact'].map(csvCell).join(',')];
     registrations.filter((registration) => !placement || registration.placement === placement).forEach((registration) => {
-        registration.members.forEach((member) => {
+        // The list of people on site leaves out the ones who take part remotely.
+        registration.members.filter((member) => placement !== 'onsite' || !member.remote).forEach((member) => {
             rows.push([registration.team_name, registration.status, registration.placement, member.real_name, displayName(member),
-                member.discord, registration.contact_email].map(csvCell).join(','));
+                member.remote ? 'yes' : 'no', member.discord, registration.contact_email].map(csvCell).join(','));
         });
     });
 

@@ -97,7 +97,7 @@ With `registration.form.enabled`, a site gets a registration form at `/register`
 ```
 
 - **Names:** Every person gives a real name and optionally a nickname, and chooses which of the two appears on the website. Real names, e-mail addresses and Discord names never leave the database except through the admin page.
-- **Seats:** Seats on site go out in the order of registration. A team that does not fit goes to the waiting list or takes part remotely, depending on its wish. Organisers can move teams in the admin page.
+- **Seats:** Each person can tick that they take part remotely only. Seats on site go out in the order of registration and count only the people on site. A team that does not fit goes to the waiting list or takes part remotely, as it chose in the form. Organisers can move teams in the admin page.
 - **Exports:** The admin page exports a CSV with real names, for example for the security staff, and `teams-YYYY.json` with team names and shown names only. Put that file in `_input/`, and `jam:add-project` offers the teams.
 - **Deletion:** Every run of the site workflow deletes registrations whose jam ended more than `retention_days` ago.
 - **Organisers:** `notify` lists addresses that get a mail for each new, changed or cancelled registration. To keep private addresses out of the public repository, put them comma-separated in the GitHub secret `JAM_REGISTRATION_NOTIFY` instead.

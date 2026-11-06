@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 /**
@@ -6,7 +6,10 @@ import { DatabaseSync } from 'node:sqlite';
  */
 export function createD1() {
     const sqlite = new DatabaseSync(':memory:');
-    sqlite.exec(readFileSync(new URL('../../resources/registration/migrations/0001_registrations.sql', import.meta.url), 'utf8'));
+    const migrations = new URL('../../resources/registration/migrations/', import.meta.url);
+    for (const file of readdirSync(migrations).filter((name) => name.endsWith('.sql')).sort()) {
+        sqlite.exec(readFileSync(new URL(file, migrations), 'utf8'));
+    }
 
     const statement = (sql, params = []) => ({
         bind: (...values) => statement(sql, values),

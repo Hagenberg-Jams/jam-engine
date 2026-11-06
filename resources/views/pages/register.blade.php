@@ -18,9 +18,8 @@
     $label = 'block font-semibold mb-1';
     $hint = 'text-sm text-gray-600 dark:text-gray-400 mt-1';
     $wishes = [
-        'onsite_only' => 'Our whole team only takes part on site. If there is no seat for us, we do not take part.',
-        'onsite_preferred' => 'Our whole team prefers to be on site, but takes part remotely if it is full.',
-        'remote' => 'Our whole team takes part remotely.',
+        'onsite_preferred' => 'If there are not enough seats on site for us, we take part remotely.',
+        'onsite_only' => 'If there are not enough seats on site for us, we go on the waiting list.',
     ];
 @endphp
 
@@ -101,16 +100,15 @@
                         @if($fields['discord'])
                             <label class="block"><span class="{{ $label }}">Discord username (optional)</span><input data-field="discord" maxlength="40" class="{{ $input }}"></label>
                         @endif
+                        <label class="flex items-center gap-2"><input type="checkbox" data-field="remote"> Takes part remotely only</label>
                     </div>
                 </template>
             </fieldset>
 
-            @if($fields['participation'])
+            @if($fields['participation'] && $form['onsite_capacity'])
                 <fieldset>
-                    <legend class="text-2xl font-bold mb-2">Participation</legend>
-                    @if($form['onsite_capacity'])
-                        <p class="mb-4 text-gray-700 dark:text-gray-300">There are {{ $form['onsite_capacity'] }} seats on site, given out in the order of registration. <span id="seats-left"></span></p>
-                    @endif
+                    <legend class="text-2xl font-bold mb-2">Seats on site</legend>
+                    <p class="mb-4 text-gray-700 dark:text-gray-300">There are {{ $form['onsite_capacity'] }} seats on site, given out in the order of registration. Only people who do not take part remotely need one. <span id="seats-left"></span></p>
                     <div class="space-y-2">
                         @foreach($wishes as $value => $text)
                             <label class="flex items-start gap-2"><input type="radio" name="wish" value="{{ $value }}" class="mt-1" @checked($value === 'onsite_preferred')> <span>{{ $text }}</span></label>
@@ -173,9 +171,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var contact = @json((string) config('jam.email'));
     var token = new URLSearchParams(location.hash.slice(1)).get('t') || location.hash.slice(1);
     var placements = {
-        onsite: 'You have a seat on site.',
-        remote: 'You take part remotely.',
-        waitlist: 'You are on the waiting list for a seat on site.'
+        onsite: 'Your team has seats on site for everyone who takes part on site.',
+        remote: 'Your team takes part remotely.',
+        waitlist: 'Your team is on the waiting list for seats on site.'
     };
 
     function show(element, text, kind) {
@@ -200,6 +198,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var field = input.getAttribute('data-field');
             if (input.type === 'radio') {
                 input.checked = input.value === (data.show_as || 'real');
+            } else if (input.type === 'checkbox') {
+                input.checked = data[field] === true;
             } else if (data[field]) {
                 input.value = data[field];
             }
@@ -230,7 +230,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 var entry = {};
                 row.querySelectorAll('[data-field]').forEach(function (input) {
                     var field = input.getAttribute('data-field');
-                    if (input.type !== 'radio') {
+                    if (input.type === 'checkbox') {
+                        entry[field] = input.checked;
+                    } else if (input.type !== 'radio') {
                         entry[field] = input.value;
                     } else if (input.checked) {
                         entry.show_as = input.value;
@@ -247,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
         members: 'Please enter between ' + min + ' and ' + max + ' people.',
         consent_privacy: 'Please confirm that you have read the privacy information.',
         consent_names: 'Please confirm that the chosen names may appear on the website.',
-        wish: 'Please choose how your team takes part.'
+        wish: 'Please choose what happens if there are not enough seats on site.'
     };
 
     function explain(fields) {

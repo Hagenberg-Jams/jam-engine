@@ -61,6 +61,7 @@ return [
             // Seats on site. null means no limit.
             'onsite_capacity' => null,
             'fields' => [
+                // With onsite_capacity: asks what happens if the team does not fit. Everyone can always choose to take part remotely.
                 'participation' => true,
                 'discord' => false,
                 'programs' => false,

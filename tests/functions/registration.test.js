@@ -195,6 +195,20 @@ describe('seats on site', () => {
         expect(status).toMatchObject({ open: true, capacity: 5, seats_left: 0 });
     });
 
+    it('counts only the people on site, and puts a team without any of them remote', async () => {
+        const mixed = [{ real_name: 'A' }, { real_name: 'B' }, { real_name: 'C', remote: true }, { real_name: 'D', remote: true }];
+        const first = await handleCreate(post(team({ wish: 'onsite_only', members: mixed }), 'm'), site, fakeDeps(), config);
+        expect(await first.json()).toEqual({ placement: 'onsite' });
+        expect(site.JAM_DB.sqlite.prepare('SELECT people, onsite_people FROM registrations').get()).toEqual({ people: 4, onsite_people: 2 });
+
+        // 3 seats are left, so a team of 3 on site still fits.
+        expect(await register('onsite_only', 3, 'n')).toBe('onsite');
+
+        const remoteOnly = [{ real_name: 'E', remote: true }];
+        const response = await handleCreate(post(team({ wish: 'onsite_only', members: remoteOnly }), 'o'), site, fakeDeps(), config);
+        expect(await response.json()).toEqual({ placement: 'remote' });
+    });
+
     it('puts everybody on site who wants it when there is no limit', async () => {
         const unlimited = { ...config, capacity: null };
         const response = await handleCreate(post(team({ wish: 'onsite_only' })), site, fakeDeps(), unlimited);
@@ -320,6 +334,17 @@ describe('admin', () => {
         expect(JSON.parse(teams).teams).toEqual([{ name: 'Pixel Pushers', members: ['Annie', 'Bo Real'] }]);
         expect(teams).not.toContain('Ann Real');
         expect(csv).toContain('"Ann Real","Annie"');
+    });
+
+    it('leaves remote people out of the list of people on site', async () => {
+        const members = [{ real_name: 'On Site' }, { real_name: 'At Home', remote: true }];
+        await handleCreate(post(team({ team_name: 'Mixed', members }), '9.9.9.9'), site, fakeDeps(), config);
+        const onsite = await (await handleAdminExport(new URL('https://jam.example/api/admin/export?placement=onsite'), site, config)).text();
+        const everyone = await (await handleAdminExport(new URL('https://jam.example/api/admin/export'), site, config)).text();
+
+        expect(onsite).toContain('"On Site"');
+        expect(onsite).not.toContain('At Home');
+        expect(everyone).toContain('"At Home","At Home","yes"');
     });
 });
 

@@ -51,6 +51,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var errorBox = document.getElementById('admin-error');
     var filter = document.getElementById('filter-status');
     var state = { registrations: [], capacity: null, seats_taken: 0 };
+    var labels = {
+        pending: 'Not confirmed yet',
+        confirmed: 'Confirmed',
+        declined: 'Declined',
+        cancelled: 'Cancelled by the team',
+        onsite: 'On site',
+        remote: 'Remote',
+        waitlist: 'Waiting list',
+        onsite_preferred: 'if full: remote',
+        onsite_only: 'if full: waiting list',
+        remote_wish: 'remote'
+    };
+    var label = function (value) { return labels[value] || value; };
 
     function element(tag, className, text) {
         var node = document.createElement(tag);
@@ -97,16 +110,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function render() {
         var active = state.registrations.filter(function (r) { return r.status !== 'cancelled' && r.status !== 'declined'; });
-        var count = function (placement) {
-            return active.filter(function (r) { return r.placement === placement; }).reduce(function (sum, r) { return sum + r.people; }, 0);
-        };
+        var sum = function (list, field) { return list.reduce(function (total, r) { return total + r[field]; }, 0); };
+        var placed = function (placement) { return active.filter(function (r) { return r.placement === placement; }); };
 
         summary.replaceChildren(
             tile('teams', active.length),
-            tile('people', active.reduce(function (sum, r) { return sum + r.people; }, 0)),
-            tile(state.capacity ? 'on site of ' + state.capacity : 'on site', count('onsite')),
-            tile('remote', count('remote')),
-            tile('waiting list', count('waitlist')),
+            tile('people', sum(active, 'people')),
+            tile(state.capacity ? 'on site of ' + state.capacity : 'on site', sum(placed('onsite'), 'onsite_people')),
+            tile('remote', sum(active, 'people') - sum(placed('onsite'), 'onsite_people') - sum(placed('waitlist'), 'onsite_people')),
+            tile('waiting for a seat', sum(placed('waitlist'), 'onsite_people')),
             tile('pending', state.registrations.filter(function (r) { return r.status === 'pending'; }).length)
         );
 
@@ -118,19 +130,19 @@ document.addEventListener('DOMContentLoaded', function () {
             var card = element('article', 'rounded-lg border border-gray-300 dark:border-gray-700 p-4');
             var head = element('div', 'flex flex-wrap justify-between gap-2');
             head.appendChild(element('h2', 'text-xl font-bold', registration.team_name));
-            head.appendChild(element('span', 'text-sm', registration.status + ' · ' + registration.placement + ' · ' + registration.people + ' people · ' + new Date(registration.created_at).toLocaleString()));
+            head.appendChild(element('span', 'text-sm', label(registration.status) + ' · ' + label(registration.placement) + ' · ' + registration.people + ' people, ' + registration.onsite_people + ' on site · ' + new Date(registration.created_at).toLocaleString()));
             card.appendChild(head);
 
-            if (registration === firstWaiting && free !== null && free >= registration.people) {
+            if (registration === firstWaiting && free !== null && free >= registration.onsite_people) {
                 card.appendChild(element('p', 'mt-2 font-semibold text-green-800 dark:text-green-300', 'Next on the waiting list, and ' + free + ' seats are free.'));
             }
 
-            card.appendChild(element('p', 'text-sm mt-1', registration.contact_email + (registration.programs.length ? ' · ' + registration.programs.join(', ') : '') + ' · wish: ' + registration.wish));
+            card.appendChild(element('p', 'text-sm mt-1', registration.contact_email + (registration.programs.length ? ' · ' + registration.programs.join(', ') : '') + (state.capacity ? ' · ' + label(registration.wish === 'remote' ? 'remote_wish' : registration.wish) : '')));
 
             var people = element('ul', 'mt-2 list-disc pl-6');
             registration.members.forEach(function (member) {
                 var shownAs = member.show_as === 'nick' && member.nickname ? ' → shown as ' + member.nickname : '';
-                people.appendChild(element('li', '', member.real_name + shownAs + (member.discord ? ' · Discord: ' + member.discord : '')));
+                people.appendChild(element('li', '', member.real_name + shownAs + (member.discord ? ' · Discord: ' + member.discord : '') + (member.remote ? ' · remote' : '')));
             });
             card.appendChild(people);
 
@@ -149,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (registration.status !== 'confirmed') { add('Confirm', { action: 'confirm' }, 'border-green-700 text-green-800 dark:text-green-300'); }
             if (registration.status !== 'declined') { add('Decline', { action: 'decline' }, 'border-red-700 text-red-800 dark:text-red-300'); }
             ['onsite', 'remote', 'waitlist'].forEach(function (placement) {
-                if (registration.placement !== placement) { add('Move to ' + placement, { action: 'place', placement: placement }); }
+                if (registration.placement !== placement) { add('Move to ' + label(placement).toLowerCase(), { action: 'place', placement: placement }); }
             });
             var remove = element('button', '{{ $button }} border-red-700 ml-auto', 'Delete');
             remove.type = 'button';
