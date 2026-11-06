@@ -1,9 +1,9 @@
-import { verifyAccess } from '../_access.js';
+import { accessToken, verifyAccess } from '../_access.js';
 import { json } from '../_registration-logic.js';
 import config from '../_registration-config.json';
 
 export async function onRequest({ request, next }) {
-    const email = await verifyAccess(request.headers.get('cf-access-jwt-assertion'), config.access, { fetch: (...args) => fetch(...args), now: Date.now() });
+    const email = await verifyAccess(accessToken(request), config.access, { fetch: (...args) => fetch(...args), now: Date.now() });
 
     return email ? next() : json(401, { error: 'unauthorized' });
 }

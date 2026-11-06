@@ -9,6 +9,17 @@ const decode = (part) => Uint8Array.from(atob(part.replace(/-/g, '+').replace(/_
 const parse = (part) => JSON.parse(new TextDecoder().decode(decode(part)));
 
 /**
+ * Access adds its token as a header on the paths of the Access application. Elsewhere on the same host,
+ * the browser still sends the CF_Authorization cookie with the same signed token, so that counts too.
+ */
+export function accessToken(request) {
+    const header = request.headers.get('cf-access-jwt-assertion');
+    const cookie = (request.headers.get('cookie') ?? '').match(/(?:^|;\s*)CF_Authorization=([^;]+)/);
+
+    return header || (cookie ? cookie[1] : null);
+}
+
+/**
  * @param {string|null} token The Cf-Access-Jwt-Assertion header
  * @param {{ team: string, aud: string }} access From the site config
  * @param {{ fetch: typeof fetch, now: number }} deps

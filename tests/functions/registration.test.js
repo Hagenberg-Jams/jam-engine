@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { verifyAccess } from '../../resources/functions/api/_access.js';
+import { accessToken, verifyAccess } from '../../resources/functions/api/_access.js';
 import {
     handleAdminAction,
     handleAdminExport,
@@ -349,6 +349,15 @@ describe('Access token', () => {
         return { now: NOW, fetch: async () => Response.json({ keys: [jwk] }) };
     };
     const valid = { iss: 'https://jams.cloudflareaccess.com', aud: ['aud-tag'], exp: NOW / 1000 + 600, email: 'orga@jam.example' };
+
+    it('takes the token from the header, or else from the Access cookie', () => {
+        const request = (headers) => new Request('https://jam.example/api/admin/registrations', { headers });
+
+        expect(accessToken(request({ 'cf-access-jwt-assertion': 'a.b.c' }))).toBe('a.b.c');
+        expect(accessToken(request({ cookie: 'theme=dark; CF_Authorization=x.y.z; other=1' }))).toBe('x.y.z');
+        expect(accessToken(request({ cookie: 'NOT_CF_Authorization=x.y.z' }))).toBeNull();
+        expect(accessToken(request({}))).toBeNull();
+    });
 
     it('accepts a valid token and returns the e-mail address', async () => {
         expect(await verifyAccess(await sign(valid), access, await deps())).toBe('orga@jam.example');
