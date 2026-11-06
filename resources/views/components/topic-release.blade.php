@@ -51,7 +51,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var clockOffset = 0;
     var timer = null;
     var fetching = false;
+    // Waits longer after each failed try, from 2 up to 30 seconds, so open tabs do not flood the function.
     var retryDelay = 2000;
+
+    function retry() {
+        setTimeout(askServer, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 30000);
+    }
 
     function show(data) {
         clearInterval(timer);
@@ -84,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (response.ok && data.topic) {
                         show(data);
                     } else if (Date.now() + clockOffset >= release) {
-                        setTimeout(askServer, retryDelay);
+                        retry();
                     } else if (timer === null) {
                         // The local clock ran ahead, so the countdown continues with the server time.
                         startCountdown();
@@ -93,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(function () {
                 if (Date.now() + clockOffset >= release) {
-                    setTimeout(askServer, retryDelay);
+                    retry();
                 }
             })
             .finally(function () {

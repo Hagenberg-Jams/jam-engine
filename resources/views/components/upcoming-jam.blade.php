@@ -5,6 +5,10 @@
     $topicJam = config('jam.features.topic_release') ? JamSchedule::currentTopicJam() : null;
     $registrationActive = (bool) config('jam.registration.active', false);
     $registrationUrl = (string) config('jam.registration.url', '');
+    $registrationForm = $registrationUrl === '' && \HagenbergJams\JamEngine\Registration::enabled();
+    if ($registrationForm) {
+        $registrationUrl = Hyde::relativeLink('register.html');
+    }
     $registrationDeadline = JamSchedule::parse(config('jam.registration.deadline'));
 @endphp
 
@@ -14,7 +18,7 @@
             <p class="uppercase tracking-wide text-sm text-primary-200 font-semibold">Next {{ config('jam.labels.jam') }}</p>
             <h2 id="upcoming-jam-heading" class="text-3xl md:text-4xl font-bold mt-2">{{ JamSchedule::formatDates($upcoming['jam']) }}</h2>
             @if($registrationActive && $registrationUrl)
-                <a href="{{ $registrationUrl }}" target="_blank" class="inline-block mt-6 bg-white text-primary-700 hover:bg-primary-100 px-8 py-3 rounded-lg font-semibold transition-colors">
+                <a href="{{ $registrationUrl }}" @unless($registrationForm) target="_blank" @endunless class="inline-block mt-6 bg-white text-primary-700 hover:bg-primary-100 px-8 py-3 rounded-lg font-semibold transition-colors">
                     Register for {{ $upcoming['year'] }}
                 </a>
                 @if($registrationDeadline)

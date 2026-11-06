@@ -106,6 +106,26 @@ test.describe('topic release', () => {
         await expect(page.locator('#topic-revealed')).toBeHidden();
     });
 
+    test('asks less and less often while the topic is missing', async ({ page }) => {
+        let calls = 0;
+        await page.clock.install({ time: RELEASE + 1000 });
+        await page.route('**/api/topic', (route) => {
+            calls++;
+            return route.fulfill({ status: 503, json: { released: true, error: 'topic not configured', now: RELEASE + 1000 } });
+        });
+        await page.goto('/animation/index.html');
+        await expect.poll(() => calls).toBeGreaterThan(0);
+
+        // Waits of 2, 4, 8, 16 and then 30 seconds: 6 calls in the first minute, instead of 30 every 2 seconds.
+        // Step through the minute, so that each answer arrives before the next timer.
+        for (let second = 0; second < 60; second++) {
+            await page.clock.runFor(1000);
+            await page.waitForTimeout(30);
+        }
+        expect(calls).toBeGreaterThanOrEqual(5);
+        expect(calls).toBeLessThanOrEqual(7);
+    });
+
     test('the reveal video respects the consent', async ({ page }) => {
         const requests = trackYoutube(page);
         await page.clock.install({ time: RELEASE + 1000 });

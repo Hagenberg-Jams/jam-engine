@@ -49,8 +49,43 @@ return [
     'registration' => [
         'next_jam' => '',
         'active' => false,
+        // An external registration page. Leave it empty to use the form on this site.
         'url' => '',
         'deadline' => '',
+
+        // The registration form on this site at /register, see the README of the engine.
+        // It needs Cloudflare D1, Turnstile, Access and the Email Service.
+        'form' => [
+            'enabled' => false,
+            'team_size' => [1, 6],
+            // Seats on site. null means no limit.
+            'onsite_capacity' => null,
+            'fields' => [
+                'participation' => true,
+                'discord' => false,
+                'programs' => false,
+                'comment' => true,
+            ],
+            'programs' => [],
+            'programs_label' => 'Our team consists of people from…',
+            'nickname_label' => 'Nickname',
+            // Organisers who get a mail for each new or changed registration.
+            'notify' => [],
+            // Sender address, for example noreply@example.org. Its domain needs the Cloudflare Email Service.
+            'from' => '',
+            // Days after the end of the jam until the registrations are deleted.
+            'retention_days' => 90,
+            'turnstile_site_key' => '',
+            'access' => [
+                'team' => '',
+                'aud' => '',
+            ],
+            'texts' => [
+                'intro' => '',
+                'confirmed' => '',
+                'declined' => '',
+            ],
+        ],
     ],
 
     'downloads' => [

@@ -35,8 +35,10 @@ it('does not announce a jam when none is upcoming', function (): void {
         ->not->toContain('id="topic-release"');
 });
 
-it('creates no functions without a topic release', function (): void {
-    expect(is_dir($GLOBALS['gameSite'] . '/functions'))->toBeFalse();
+it('creates no topic function without a topic release', function (): void {
+    // The game fixture has the registration form on, so functions/ itself exists.
+    expect(file_exists($GLOBALS['gameSite'] . '/functions/api/topic.js'))->toBeFalse()
+        ->and(file_exists($GLOBALS['gameSite'] . '/functions/api/registration/index.js'))->toBeTrue();
 });
 
 it('uses the configured base URL for downloads', function (): void {

@@ -61,6 +61,42 @@
             </p>
         @endif
 
+        @if(\HagenbergJams\JamEngine\Registration::enabled())
+            <h2 id="registration">Registration</h2>
+            <p>
+                @php
+                    $retention = (int) config('jam.registration.form.retention_days', 90);
+                    $registrationFields = config('jam.registration.form.fields');
+                    $registrationData = array_filter([
+                        'the team name',
+                        'a contact e-mail address',
+                        'the real name of every person',
+                        'optionally a nickname and the choice which of the two names appears on the website',
+                        $registrationFields['discord'] ? 'Discord usernames' : null,
+                        $registrationFields['programs'] ? 'the study programmes of the team' : null,
+                        $registrationFields['participation'] ? 'how the team takes part' : null,
+                        $registrationFields['comment'] ? 'your comment' : null,
+                    ]);
+                @endphp
+                When you register for a jam on this website, we process the data you enter: {{ implode(', ', array_slice($registrationData, 0, -1)) }} and {{ end($registrationData) }}.
+                We use the data to organise the jam: to confirm registrations, to assign seats on site, to contact you, and to give the security staff on site a list of the participants.
+                After the jam, the team name and the name each person chose appear on this website, for example with the project. Real names are only shown for people who chose them.
+            </p>
+            <p>
+                The data is stored with Cloudflare, Inc. (101 Townsend St, San Francisco, CA 94107, USA) in a Cloudflare D1 database, and the mails about your registration are sent through the Cloudflare Email Service.
+                Cloudflare processes the data on our behalf. Transfers to the USA are based on the EU-U.S. Data Privacy Framework and the standard contractual clauses of the European Commission, see the
+                <a href="https://www.cloudflare.com/cloudflare-customer-dpa/" class="{{ $linkClass }}" target="_blank" rel="noopener noreferrer">Cloudflare Data Processing Addendum</a>.
+                To protect the form against spam, it uses Cloudflare Turnstile, which checks your browser without cookies, see the
+                <a href="https://www.cloudflare.com/privacypolicy/" class="{{ $linkClass }}" target="_blank" rel="noopener noreferrer">Cloudflare Privacy Policy</a>.
+            </p>
+            <p>
+                Only the organisers can see the registrations, after signing in. You can change or cancel your registration at any time with the link in your confirmation mail.
+                All registration data is deleted automatically {{ $retention }} days after the end of the jam. The legal basis is your consent and the organisation of the event you registered for (Art. 6 (1) (a) and (b) GDPR).
+                You have the right to access, rectification, erasure, restriction of processing, data portability and objection, and you can lodge a complaint with the data protection authority. Write to
+                <a href="mailto:{{ config('jam.email') }}" class="{{ $linkClass }}">{{ config('jam.email') }}</a> for any of these.
+            </p>
+        @endif
+
         <h2 id="youtube">YouTube Embeds</h2>
         <p>
             This website embeds videos from YouTube. When you play a video, YouTube (operated by Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA) may set cookies and collect data about your visit. This includes your IP address, the pages you visit, and interactions with the video. The data is processed according to Google's

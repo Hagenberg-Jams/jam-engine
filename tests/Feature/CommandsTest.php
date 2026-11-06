@@ -117,3 +117,24 @@ it('rejects a malformed topic release', function (): void {
     expect(runHyde($site, 'jam:topic-release 20.11.2026')->getExitCode())->toBe(1)
         ->and((string) file_get_contents("{$site}/_data/jams/2026.yaml"))->toContain("topic_release: '2026-11-20T18:00:00+01:00'");
 });
+
+it('takes team and shown names from the registration export', function (): void {
+    $site = fixtureCopy('animation');
+    mkdir("{$site}/_input/header", 0777, true);
+    mkdir("{$site}/_input/screenshots", 0777, true);
+    exec('magick -size 2000x1000 xc:red ' . escapeshellarg("{$site}/_input/header/h.png"));
+    file_put_contents("{$site}/_input/teams-2025.json", json_encode(['year' => 2025, 'teams' => [['name' => 'Night Owls', 'members' => ['Annie', 'Bo Real']]]]));
+
+    $process = runWithInput($site, 'jam:add-project --year=2025', [
+        'Owl Film',
+        '',
+        'A description.',
+        '---END---',
+        'Night Owls',
+        'no',
+    ]);
+    $data = (string) file_get_contents("{$site}/_data/projects/2025.yaml");
+
+    expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
+        ->and($data)->toContain('Night Owls')->toContain('Annie')->toContain('Bo Real');
+})->skip(fn(): bool => !magickAvailable(), 'ImageMagick (magick) is not installed');

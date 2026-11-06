@@ -9,6 +9,7 @@ use function array_map;
 use function glob;
 
 use HagenbergJams\JamEngine\JamData;
+use HagenbergJams\JamEngine\Registration;
 use Hyde\Framework\Features\BuildTasks\PreBuildTask;
 use Hyde\Hyde;
 use Hyde\Pages\BladePage;
@@ -35,6 +36,7 @@ class GeneratePagesBuildTask extends PreBuildTask
     public function handle(): void
     {
         $this->registerStaticPages();
+        $this->registerRegistrationPages();
 
         $years = $this->discoverYears();
 
@@ -76,6 +78,30 @@ class GeneratePagesBuildTask extends PreBuildTask
 
             Hyde::pages()->addPage($page);
             Hyde::routes()->addRoute(new Route($page));
+        }
+    }
+
+    /**
+     * The registration form, the page to change a registration, and the admin page behind Cloudflare Access.
+     */
+    protected function registerRegistrationPages(): void
+    {
+        if (!Registration::enabled()) {
+            return;
+        }
+
+        $year = Registration::year();
+        $pages = [
+            'register' => ['view' => 'pages.register', 'mode' => 'create'],
+            'register/edit' => ['view' => 'pages.register', 'mode' => 'edit'],
+            'admin/registrations' => ['view' => 'pages.admin-registrations', 'mode' => 'admin'],
+        ];
+
+        foreach ($pages as $identifier => $page) {
+            $memoryPage = InMemoryPage::make($identifier, ['year' => $year, 'mode' => $page['mode']], '', $page['view']);
+
+            Hyde::pages()->addPage($memoryPage);
+            Hyde::routes()->addRoute(new Route($memoryPage));
         }
     }
 

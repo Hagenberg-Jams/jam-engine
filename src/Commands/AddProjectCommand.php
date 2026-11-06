@@ -244,9 +244,14 @@ class AddProjectCommand extends Command
 
         $videos = $this->hasSection('video') ? $this->askForVideos() : [];
         $description = $this->askForDescription();
-        $teamNameInput = $this->ask('Team name');
-        $teamName = is_string($teamNameInput) ? $teamNameInput : '';
-        $teamMembers = $this->askForTeamMembers();
+        $registered = $this->chooseRegisteredTeam();
+        if ($registered !== null) {
+            [$teamName, $teamMembers] = $registered;
+        } else {
+            $teamNameInput = $this->ask('Team name');
+            $teamName = is_string($teamNameInput) ? $teamNameInput : '';
+            $teamMembers = $this->askForTeamMembers();
+        }
         $winner = $this->askForWinner();
 
         return [
@@ -260,6 +265,37 @@ class AddProjectCommand extends Command
             'teamMembers' => $teamMembers,
             'winner' => $winner,
         ];
+    }
+
+    /**
+     * Offers the teams from `_input/teams-{year}.json`, the export of the registration form.
+     * It only holds team names and the names people chose to show, never real names they did not choose.
+     *
+     * @return array{0: string, 1: array<int, string>}|null
+     */
+    protected function chooseRegisteredTeam(): ?array
+    {
+        $file = base_path("_input/teams-{$this->year}.json");
+        $data = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        $teams = is_array($data) && is_array($data['teams'] ?? null) ? array_values(array_filter($data['teams'], 'is_array')) : [];
+
+        if ($teams === []) {
+            return null;
+        }
+
+        $other = 'Another team (enter it by hand)';
+        $choices = array_map(fn(array $team): string => (string) ($team['name'] ?? ''), $teams);
+        $choice = $this->choice('Team', [...$choices, $other], $other);
+        $index = array_search($choice, $choices, true);
+
+        if ($index === false) {
+            return null;
+        }
+
+        $members = array_values(array_map(fn(mixed $member): string => is_scalar($member) ? (string) $member : '', (array) ($teams[$index]['members'] ?? [])));
+        $this->info('Team members: ' . implode(', ', $members));
+
+        return [$choices[$index], $members];
     }
 
     protected function hasSection(string $section): bool

@@ -70,6 +70,51 @@ php hyde jam:topic-release --remove
 
 The build fails if `topic:` is in the YAML file before the release time.
 
+## Registration form
+
+With `registration.form.enabled`, a site gets a registration form at `/register`. Teams register, get a mail with a private link to change or cancel, and organisers manage the registrations at `/admin/registrations`.
+
+```php
+'registration' => [
+    'active' => true,
+    'url' => '',                       // empty: use the form
+    'deadline' => '2026-12-07 23:59',
+    'form' => [
+        'enabled' => true,
+        'team_size' => [1, 6],
+        'onsite_capacity' => 100,      // null: no limit
+        'fields' => ['participation' => true, 'discord' => true, 'programs' => true, 'comment' => true],
+        'programs' => ['Media Technology and Design (MTD.ba)', '...'],
+        'nickname_label' => 'Nickname',
+        'notify' => ['orga@example.org'],
+        'from' => 'noreply@example.org',
+        'retention_days' => 90,
+        'turnstile_site_key' => '0x...',
+        'access' => ['team' => 'my-team', 'aud' => '...'],
+        'texts' => ['intro' => '', 'confirmed' => '', 'declined' => ''],
+    ],
+],
+```
+
+- **Names:** Every person gives a real name and optionally a nickname, and chooses which of the two appears on the website. Real names, e-mail addresses and Discord names never leave the database except through the admin page.
+- **Seats:** Seats on site go out in the order of registration. A team that does not fit goes to the waiting list or takes part remotely, depending on its wish. Organisers can move teams in the admin page.
+- **Exports:** The admin page exports a CSV with real names, for example for the security staff, and `teams-YYYY.json` with team names and shown names only. Put that file in `_input/`, and `jam:add-project` offers the teams.
+- **Deletion:** Every run of the site workflow deletes registrations whose jam ended more than `retention_days` ago.
+- **Privacy:** The imprint gets a section on the registration, linked from the form. Check it for your organisation.
+
+### Cloudflare setup
+
+1. Book **Workers Paid**, which the Email Service needs to mail any address.
+2. Enable sending for the domain of `from` under **Email Service → Sending**.
+3. Create a **Turnstile** widget for the domain and the `pages.dev` host of the project. Put the site key in the config and the secret key in the GitHub secret `TURNSTILE_SECRET`.
+4. Create a **Cloudflare Access** self-hosted application for `/admin` and `/api/admin` on the domain, and `/admin` on `<project>.pages.dev` and `*.<project>.pages.dev`. Use One-time PIN and a policy with the organisers' addresses. Put the team name and the AUD tag in the config.
+5. Give the deploy token `D1: Edit` in addition to `Cloudflare Pages: Edit`.
+6. Create a second token with only `Email Sending: Edit` and store it as the GitHub secret `EMAIL_API_TOKEN`. It is handed to the function, so it should not be able to do anything else.
+
+The workflow then creates one D1 database for production and one for previews, applies the migrations, and sets the bindings and secrets of the Pages project.
+
+To run the functions locally, use a short storage path on Windows, for example `npx wrangler pages dev _site --d1 JAM_DB --persist-to C:/tmp/jam`. Long paths make the local database fail.
+
 ## Deployment
 
 Sites use the reusable workflow with a short workflow file of their own:

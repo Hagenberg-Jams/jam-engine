@@ -22,6 +22,10 @@ on:
         required: false
       JAM_TOPIC_VIDEO:
         required: false
+      TURNSTILE_SECRET:
+        required: false
+      EMAIL_API_TOKEN:
+        required: false
 
 jobs:
   build:
@@ -76,6 +80,64 @@ jobs:
           PROJECT: ${{ inputs.project-name }}
         run: |
           npx --yes wrangler@4 pages project list | grep -q " $PROJECT " || npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main
+
+      # Only when the registration form is on. It runs before the topic step, so that the topic secret
+      # is uploaded last, whatever the API does with existing variables.
+      - name: Set up the registration database
+        if: steps.deploy.outputs.enabled == 'true' && hashFiles('functions/api/_registration-config.json') != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ inputs.project-name }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          EMAIL_API_TOKEN: ${{ secrets.EMAIL_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
+          migrations="$PWD/vendor/hagenberg-jams/jam-engine/resources/registration/migrations"
+          now="CAST(strftime('%s', 'now') AS INTEGER) * 1000"
+          ids=()
+
+          # One database for production and one for previews, so that test registrations stay apart.
+          for suffix in "" "-preview"; do
+            name="$PROJECT-registrations$suffix"
+            id=$(curl -fsS "${auth[@]}" "$api/d1/database?name=$name" | jq -r --arg name "$name" '[.result[] | select(.name == $name)][0].uuid // empty')
+            if [ -z "$id" ]; then
+              id=$(curl -fsS "${auth[@]}" -X POST "$api/d1/database" -d "$(jq -n --arg name "$name" '{name: $name}')" | jq -r .result.uuid)
+            fi
+
+            dir="$RUNNER_TEMP/d1$suffix"
+            mkdir -p "$dir"
+            {
+              echo "name = \"$PROJECT\""
+              echo "[[d1_databases]]"
+              echo "binding = \"JAM_DB\""
+              echo "database_name = \"$name\""
+              echo "database_id = \"$id\""
+              echo "migrations_dir = \"$migrations\""
+            } > "$dir/wrangler.toml"
+            (cd "$dir" && npx --yes wrangler@4 d1 migrations apply "$name" --remote)
+
+            # Deletes registrations whose retention time is over.
+            purge="DELETE FROM members WHERE registration_id IN (SELECT id FROM registrations WHERE purge_after < $now);"
+            purge="$purge DELETE FROM registrations WHERE purge_after < $now;"
+            (cd "$dir" && npx --yes wrangler@4 d1 execute "$name" --remote --command "$purge")
+            ids+=("$id")
+          done
+
+          body=$(jq -n --arg production "${ids[0]}" --arg preview "${ids[1]}" --arg account "$CLOUDFLARE_ACCOUNT_ID" \
+            --arg turnstile "$TURNSTILE_SECRET" --arg mail "$EMAIL_API_TOKEN" '
+            def secret($name; $value): if $value == "" then {} else {($name): {type: "secret_text", value: $value}} end;
+            def environment($db): {
+              d1_databases: {JAM_DB: {id: $db}},
+              env_vars: ({CF_ACCOUNT_ID: {type: "plain_text", value: $account}}
+                + secret("TURNSTILE_SECRET"; $turnstile) + secret("EMAIL_API_TOKEN"; $mail))
+            };
+            {deployment_configs: {production: environment($production), preview: environment($preview)}}')
+          curl -fsS "${auth[@]}" -X PATCH "$api/pages/projects/$PROJECT" -d "$body" > /dev/null
+          if [ -z "$EMAIL_API_TOKEN" ]; then echo "::warning::EMAIL_API_TOKEN is not set, so the registration sends no mails."; fi
+          if [ -z "$TURNSTILE_SECRET" ]; then echo "::warning::TURNSTILE_SECRET is not set, so every registration fails the spam check."; fi
 
       - name: Transfer the topic to Cloudflare
         if: steps.deploy.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
