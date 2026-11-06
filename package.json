@@ -9,7 +9,7 @@
     "devDependencies": {
         "@playwright/test": "^1.50.0",
         "@tailwindcss/typography": "^0.5.20",
-        "@tailwindcss/vite": "^4.3.3",
+        "@tailwindcss/vite": "^4.3.4",
         "glightbox": "^3.3.1",
         "hydefront": "^4.0.0",
         "swiper": "^14.2.0",
