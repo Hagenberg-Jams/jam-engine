@@ -314,6 +314,26 @@ describe('admin', () => {
         expect(quiet.mails).toEqual([]);
     });
 
+    it('adds a registration from an earlier form, without Turnstile or deadline, and mails the edit link', async () => {
+        const deps = fakeDeps({ turnstile: false, now: Date.parse('2026-12-20T12:00:00+01:00') });
+        const body = { action: 'create', status: 'confirmed', registration: team({ team_name: 'Old Form', consent_privacy: false, consent_names: false, turnstile: '' }) };
+        const response = await handleAdminAction(action(body), site, deps, config);
+        const result = await response.json();
+
+        expect(response.status).toBe(201);
+        expect(result.registration).toMatchObject({ team_name: 'Old Form', status: 'confirmed', placement: 'onsite' });
+        expect(deps.mails).toHaveLength(1);
+        expect(deps.mails[0].subject).toContain('Please check your registration');
+        expect(deps.mails[0].text).toContain('/register/edit#');
+        expect(deps.mails[0].text).toContain('/imprint#registration');
+    });
+
+    it('rejects an added registration without a real name', async () => {
+        const body = { action: 'create', registration: team({ members: [{ real_name: '', nickname: 'X' }] }) };
+
+        expect((await handleAdminAction(action(body), site, fakeDeps(), config)).status).toBe(422);
+    });
+
     it('rejects unknown actions and placements', async () => {
         expect((await handleAdminAction(action({ id, action: 'explode' }), site, fakeDeps(), config)).status).toBe(400);
         expect((await handleAdminAction(action({ id, action: 'place', placement: 'moon' }), site, fakeDeps(), config)).status).toBe(400);

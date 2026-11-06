@@ -37,6 +37,36 @@
             </label>
         </div>
 
+        <details id="admin-add" class="rounded-lg border border-gray-300 dark:border-gray-700 p-4 mb-6">
+            <summary class="font-semibold cursor-pointer">Add a registration</summary>
+            <p class="text-sm mt-2">For registrations from an earlier form. The team gets a mail with the link to check the details, choose the names shown on the website, or cancel.</p>
+            <form id="admin-add-form" class="grid gap-3 mt-4 max-w-2xl">
+                <label class="block"><span class="font-semibold">Team name</span>
+                    <input name="team_name" required class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1"></label>
+                <label class="block"><span class="font-semibold">Contact e-mail</span>
+                    <input name="contact_email" type="email" required class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1"></label>
+                <label class="block"><span class="font-semibold">People, one per line</span>
+                    <textarea name="members" rows="5" required class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 font-mono text-sm"
+                        placeholder="Real name; nickname; Discord; remote"></textarea>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Real name; nickname; Discord; remote. Only the real name is needed. With a nickname, the nickname is shown. Write "remote" at the end for people who only take part remotely.</span></label>
+                <label class="block"><span class="font-semibold">Comment</span>
+                    <input name="comment" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1"></label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2">Status
+                        <select name="status" class="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1">
+                            <option value="confirmed">confirmed</option>
+                            <option value="pending">not confirmed yet</option>
+                        </select></label>
+                    <label class="flex items-center gap-2">If full
+                        <select name="wish" class="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1">
+                            <option value="onsite_preferred">remote</option>
+                            <option value="onsite_only">waiting list</option>
+                        </select></label>
+                </div>
+                <div><button type="submit" class="{{ $button }} border-primary-600">Add and mail the team</button></div>
+            </form>
+        </details>
+
         <div id="admin-error" class="hidden rounded-lg bg-red-100 dark:bg-red-900/40 p-4 mb-6" role="alert"></div>
         <div id="admin-list" class="space-y-4"></div>
     </div>
@@ -185,6 +215,43 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     filter.addEventListener('change', render);
+
+    var addForm = document.getElementById('admin-add-form');
+    addForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        errorBox.classList.add('hidden');
+        var members = addForm.elements.members.value.split('\n').map(function (line) { return line.trim(); }).filter(Boolean).map(function (line) {
+            var parts = line.split(';').map(function (part) { return part.trim(); });
+            var remote = parts.length > 1 && parts[parts.length - 1].toLowerCase() === 'remote';
+            if (remote) { parts.pop(); }
+            return { real_name: parts[0] || '', nickname: parts[1] || '', discord: parts[2] || '', show_as: parts[1] ? 'nick' : 'real', remote: remote };
+        });
+        fetch('/api/admin/registrations', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                action: 'create',
+                status: addForm.elements.status.value,
+                notify: document.getElementById('send-mail').checked,
+                registration: {
+                    team_name: addForm.elements.team_name.value,
+                    contact_email: addForm.elements.contact_email.value,
+                    comment: addForm.elements.comment.value,
+                    wish: addForm.elements.wish.value,
+                    members: members
+                }
+            })
+        }).then(function (response) {
+            return response.json().catch(function () { return {}; }).then(function (data) {
+                if (!response.ok) {
+                    throw new Error(data.fields ? 'check ' + data.fields.join(', ') : String(response.status));
+                }
+                addForm.reset();
+                load();
+            });
+        }).catch(function (error) { fail('Adding the registration failed (' + error.message + ').'); });
+    });
     document.getElementById('copy-discord').addEventListener('click', function () {
         var names = state.registrations.filter(function (r) { return r.status !== 'cancelled' && r.status !== 'declined'; })
             .flatMap(function (r) { return r.members.map(function (m) { return m.discord; }); }).filter(Boolean);

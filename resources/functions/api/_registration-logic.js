@@ -206,6 +206,7 @@ export function teamMail(event, registration, config, token) {
         declined: `Registration declined: ${config.siteName} ${config.year}`,
         placement: `Your participation: ${config.siteName} ${config.year}`,
         cancelled: `Registration cancelled: ${config.siteName} ${config.year}`,
+        added: `Please check your registration: ${config.siteName} ${config.year}`,
     };
     const bodies = {
         received: `Thank you for registering for the ${config.siteName} ${config.year}. We will confirm your registration soon.\n\n${PLACEMENT_TEXT[registration.placement]}`,
@@ -213,6 +214,11 @@ export function teamMail(event, registration, config, token) {
         declined: `Unfortunately, we cannot accept your registration for the ${config.siteName} ${config.year}.${texts.declined ? `\n\n${texts.declined}` : ''}`,
         placement: `Your participation in the ${config.siteName} ${config.year} has changed. ${PLACEMENT_TEXT[registration.placement]}`,
         cancelled: `Your registration for the ${config.siteName} ${config.year} is cancelled. If this was a mistake, please reply to this mail.`,
+        added: `The organisers of the ${config.siteName} ${config.year} have moved your registration to the registration on our website. `
+            + `Please check the details below. With the link at the end of this mail, you can correct them, choose for each person whether `
+            + `the real name or a nickname appears on the website, or cancel the registration.\n\n${PLACEMENT_TEXT[registration.placement]}`
+            + (registration.status === 'confirmed' ? ' Your registration is confirmed.' : '')
+            + `\n\nHow we handle your data: ${config.siteUrl}/imprint#registration`,
     };
 
     return {
@@ -298,24 +304,29 @@ export async function handleCreate(request, env, deps, config) {
         return json(429, { error: 'too_many' });
     }
 
+    const { registration, token } = await insertRegistration(db, data, config, deps, ipHash, 'pending');
+    await sendMail(deps, env, config, teamMail('received', registration, config, token));
+    await sendMail(deps, env, config, organiserMail('created', registration, config));
+
+    return json(201, { placement: registration.placement });
+}
+
+/** Stores a new registration and decides its placement in the same statement, so seats cannot be given out twice. */
+async function insertRegistration(db, data, config, deps, ipHash, status) {
     const id = crypto.randomUUID();
     const token = randomToken();
 
     await db.batch([
         db.prepare(`INSERT INTO registrations (id, year, team_name, contact_email, programs, wish, placement, people, onsite_people,
-                comment, edit_token_hash, ip_hash, consent_at, created_at, updated_at, purge_after)
-            SELECT ?5, ?4, ?6, ?7, ?8, ?1, ${PLACEMENT_SQL}, ?14, ?2, ?9, ?10, ?11, ?12, ?12, ?12, ?13`)
+                comment, edit_token_hash, ip_hash, consent_at, created_at, updated_at, purge_after, status)
+            SELECT ?5, ?4, ?6, ?7, ?8, ?1, ${PLACEMENT_SQL}, ?14, ?2, ?9, ?10, ?11, ?12, ?12, ?12, ?13, ?15`)
             .bind(data.wish, data.onsite, config.capacity, config.year, id, data.team_name, data.contact_email,
                 JSON.stringify(data.programs), data.comment, await sha256(token), ipHash, deps.now, Date.parse(config.purgeAfter),
-                data.members.length),
+                data.members.length, status),
         ...memberStatements(db, id, data.members),
     ]);
 
-    const registration = await findRegistration(db, 'id', id);
-    await sendMail(deps, env, config, teamMail('received', registration, config, token));
-    await sendMail(deps, env, config, organiserMail('created', registration, config));
-
-    return json(201, { placement: registration.placement });
+    return { registration: await findRegistration(db, 'id', id), token };
 }
 
 async function byToken(request, env) {
@@ -395,6 +406,20 @@ export async function handleAdminAction(request, env, deps, config) {
     config = forRequest(request, config);
     const input = await request.json().catch(() => ({}));
     const db = env.JAM_DB;
+
+    // Registrations from an earlier form. The team gets the link to check them and to choose the names shown.
+    if (input.action === 'create') {
+        const { errors, data } = validate({ ...input.registration, consent_privacy: true, consent_names: true }, config);
+        if (errors.length > 0) {
+            return json(422, { error: 'validation', fields: errors });
+        }
+
+        const status = input.status === 'pending' ? 'pending' : 'confirmed';
+        const { registration, token } = await insertRegistration(db, data, config, deps, 'organisers', status);
+        const mailed = input.notify === false ? false : await sendMail(deps, env, config, teamMail('added', registration, config, token));
+
+        return json(201, { registration: publicView(registration), mailed });
+    }
     const registration = await findRegistration(db, 'id', input.id ?? '');
 
     if (!registration || registration.year !== config.year) {

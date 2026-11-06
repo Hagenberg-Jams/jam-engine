@@ -138,3 +138,37 @@ test('lists registrations for the organisers and confirms one', async ({ page })
     await expect.poll(() => actions.length).toBe(1);
     expect(actions[0]).toEqual({ action: 'confirm', id: 'a', notify: true });
 });
+
+test('adds a registration from an earlier form', async ({ page }) => {
+    let sent = null;
+    await page.route('**/api/admin/registrations', (route) => {
+        if (route.request().method() === 'POST') {
+            sent = route.request().postDataJSON();
+            return route.fulfill({ status: 201, json: { mailed: true } });
+        }
+        return route.fulfill({ json: { year: 2025, capacity: 10, seats_taken: 0, registrations: [] } });
+    });
+    await page.goto('/game/admin/registrations.html');
+
+    await page.locator('#admin-add summary').click();
+    await page.fill('#admin-add-form [name=team_name]', 'Old Form');
+    await page.fill('#admin-add-form [name=contact_email]', 'old@example.org');
+    await page.fill('#admin-add-form [name=members]', 'Ann Real; Annie; ann\nBo Real\nCy Real;;; remote');
+    await page.locator('#admin-add-form button[type=submit]').click();
+
+    await expect.poll(() => sent).not.toBeNull();
+    expect(sent).toMatchObject({
+        action: 'create',
+        status: 'confirmed',
+        notify: true,
+        registration: {
+            team_name: 'Old Form',
+            contact_email: 'old@example.org',
+            members: [
+                { real_name: 'Ann Real', nickname: 'Annie', discord: 'ann', show_as: 'nick', remote: false },
+                { real_name: 'Bo Real', nickname: '', show_as: 'real', remote: false },
+                { real_name: 'Cy Real', nickname: '', show_as: 'real', remote: true },
+            ],
+        },
+    });
+});
