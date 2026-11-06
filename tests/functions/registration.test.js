@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { accessToken, verifyAccess } from '../../resources/functions/api/_access.js';
 import {
     handleAdminAction,
@@ -51,12 +51,11 @@ function fakeDeps({ turnstile = true, now = NOW } = {}) {
 const team = (overrides = {}) => ({
     team_name: 'Pixel Pushers',
     contact_email: 'Lead@Example.org',
-    programs: ['SE.ba', 'Unknown'],
     wish: 'onsite_preferred',
     comment: 'Hello',
     members: [
-        { real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', discord: 'ann#1' },
-        { real_name: 'Bo Real', nickname: '', show_as: 'real', discord: '' },
+        { program: 'SE.ba', real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', discord: 'ann#1' },
+        { program: 'MTD.ba', real_name: 'Bo Real', nickname: '', show_as: 'real', discord: '' },
     ],
     consent_privacy: true,
     consent_names: true,
@@ -73,24 +72,33 @@ const post = (body, ip = '1.2.3.4') => new Request('https://jam.example/api/regi
 const tokenFrom = (mail) => mail.text.match(/edit#([A-Za-z0-9_-]+)/)[1];
 
 describe('validation', () => {
-    it('cleans the input and keeps only known programs', () => {
+    it('cleans the input and collects the programmes of the team', () => {
         const { errors, data } = validate(team(), config);
 
         expect(errors).toEqual([]);
         expect(data.contact_email).toBe('lead@example.org');
-        expect(data.programs).toEqual(['SE.ba']);
+        expect(data.members.map((member) => member.program)).toEqual(['SE.ba', 'MTD.ba']);
+        expect(data.programs).toEqual(['MTD.ba', 'SE.ba']);
         expect(data.members).toHaveLength(2);
+    });
+
+    it('asks each person for a programme from the list, except when organisers add a registration', () => {
+        const members = [{ real_name: 'Ann', program: 'Unknown' }, { real_name: 'Bo' }];
+
+        expect(validate(team({ members }), config).errors).toEqual(['members.0.program', 'members.1.program']);
+        expect(validate(team({ members }), config, { organisers: true }).errors).toEqual([]);
+        expect(validate(team({ members }), config, { organisers: true }).data.members[0].program).toBe('');
     });
 
     it('requires a real name, a nickname when it is shown, both consents and a valid team size', () => {
         const { errors } = validate(team({
-            members: [{ real_name: '', nickname: 'X' }, { real_name: 'Y', show_as: 'nick' }],
+            members: [{ program: 'SE.ba', real_name: '', nickname: 'X' }, { program: 'SE.ba', real_name: 'Y', show_as: 'nick' }],
             consent_names: false,
         }), config);
 
         expect(errors).toEqual(expect.arrayContaining(['members.0.real_name', 'members.1.nickname', 'consent_names']));
         expect(validate(team({ members: [] }), config).errors).toContain('members');
-        expect(validate(team({ members: Array(7).fill({ real_name: 'Z' }) }), config).errors).toContain('members');
+        expect(validate(team({ members: Array(7).fill({ program: 'SE.ba', real_name: 'Z' }) }), config).errors).toContain('members');
     });
 
     it('ignores fields that the jam does not ask for', () => {
@@ -115,10 +123,23 @@ describe('registering', () => {
 
         expect(response.status).toBe(201);
         expect(await response.json()).toEqual({ placement: 'onsite' });
-        expect(deps.mails.map((mail) => mail.to)).toEqual(['lead@example.org', ['orga@jam.example']]);
+        expect(deps.mails.map((mail) => mail.to)).toEqual(['lead@example.org', 'orga@jam.example']);
         expect(deps.mails[0].text).toContain('https://jam.example/register/edit#');
+        expect(deps.mails[0].text).toContain('- Bo Real, MTD.ba');
         expect(deps.mails[0].from).toEqual({ address: 'noreply@jam.example', name: 'Test Jam' });
         expect(site.JAM_DB.sqlite.prepare('SELECT COUNT(*) AS n FROM members').get().n).toBe(2);
+    });
+
+    it('mails each organiser separately, so one failing address does not stop the others', async () => {
+        const deps = fakeDeps();
+        const send = deps.fetch;
+        deps.fetch = async (url, init) => (String(init?.body).includes('"to":"broken@jam.example"') ? new Response('{"success":false}', { status: 400 }) : send(url, init));
+        const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+        await handleCreate(post(team()), site, deps, { ...config, notify: ['broken@jam.example', 'orga@jam.example', 'second@jam.example'] });
+
+        expect(deps.mails.map((mail) => mail.to)).toEqual(['lead@example.org', 'orga@jam.example', 'second@jam.example']);
+        expect(errors).toHaveBeenCalledWith(expect.stringContaining('failed with 400'));
+        errors.mockRestore();
     });
 
     it('links to the host the registration came from, for example a preview', async () => {
@@ -178,7 +199,7 @@ describe('seats on site', () => {
     });
 
     const register = async (wish, people, ip) => {
-        const members = Array.from({ length: people }, (_, i) => ({ real_name: `Person ${i}` }));
+        const members = Array.from({ length: people }, (_, i) => ({ program: 'SE.ba', real_name: `Person ${i}` }));
         const response = await handleCreate(post(team({ wish, members }), ip), site, fakeDeps(), config);
 
         return (await response.json()).placement;
@@ -196,7 +217,7 @@ describe('seats on site', () => {
     });
 
     it('counts only the people on site, and puts a team without any of them remote', async () => {
-        const mixed = [{ real_name: 'A' }, { real_name: 'B' }, { real_name: 'C', remote: true }, { real_name: 'D', remote: true }];
+        const mixed = [{ program: 'SE.ba', real_name: 'A' }, { program: 'SE.ba', real_name: 'B' }, { program: 'SE.ba', real_name: 'C', remote: true }, { program: 'SE.ba', real_name: 'D', remote: true }];
         const first = await handleCreate(post(team({ wish: 'onsite_only', members: mixed }), 'm'), site, fakeDeps(), config);
         expect(await first.json()).toEqual({ placement: 'onsite' });
         expect(site.JAM_DB.sqlite.prepare('SELECT people, onsite_people FROM registrations').get()).toEqual({ people: 4, onsite_people: 2 });
@@ -204,7 +225,7 @@ describe('seats on site', () => {
         // 3 seats are left, so a team of 3 on site still fits.
         expect(await register('onsite_only', 3, 'n')).toBe('onsite');
 
-        const remoteOnly = [{ real_name: 'E', remote: true }];
+        const remoteOnly = [{ program: 'SE.ba', real_name: 'E', remote: true }];
         const response = await handleCreate(post(team({ wish: 'onsite_only', members: remoteOnly }), 'o'), site, fakeDeps(), config);
         expect(await response.json()).toEqual({ placement: 'remote' });
     });
@@ -219,7 +240,7 @@ describe('seats on site', () => {
 
     it('frees the seats of a cancelled team', async () => {
         const deps = fakeDeps();
-        await handleCreate(post(team({ members: Array(5).fill({ real_name: 'X' }) })), site, deps, config);
+        await handleCreate(post(team({ members: Array(5).fill({ program: 'SE.ba', real_name: 'X' }) })), site, deps, config);
         const token = tokenFrom(deps.mails[0]);
 
         expect(await register('onsite_only', 1, 'z')).toBe('waitlist');
@@ -259,17 +280,17 @@ describe('changing a registration with the edit link', () => {
 
     it('updates members and keeps the seat while the team does not grow', async () => {
         const deps = fakeDeps();
-        const response = await handleSelf(self('PUT', token, team({ members: [{ real_name: 'Only One' }] })), site, deps, config);
+        const response = await handleSelf(self('PUT', token, team({ members: [{ program: 'SE.ba', real_name: 'Only One' }] })), site, deps, config);
         const body = await response.json();
 
         expect(response.status).toBe(200);
         expect(body.registration.members).toHaveLength(1);
         expect(body.registration.placement).toBe('onsite');
-        expect(deps.mails[0].to).toEqual(['orga@jam.example']);
+        expect(deps.mails[0].to).toBe('orga@jam.example');
     });
 
     it('checks the seats again when the team grows beyond the capacity', async () => {
-        const members = Array(6).fill({ real_name: 'X' });
+        const members = Array(6).fill({ program: 'SE.ba', real_name: 'X' });
         const body = await (await handleSelf(self('PUT', token, team({ members })), site, fakeDeps(), config)).json();
 
         expect(body.registration.placement).toBe('remote');
@@ -278,7 +299,7 @@ describe('changing a registration with the edit link', () => {
     it('cancels and then forgets the link', async () => {
         const deps = fakeDeps();
         expect((await handleSelf(self('DELETE', token), site, deps, config)).status).toBe(200);
-        expect(deps.mails.map((mail) => mail.to)).toEqual(['lead@example.org', ['orga@jam.example']]);
+        expect(deps.mails.map((mail) => mail.to)).toEqual(['lead@example.org', 'orga@jam.example']);
         expect((await handleSelf(self('GET', token), site, fakeDeps(), config)).status).toBe(404);
     });
 });
@@ -329,7 +350,7 @@ describe('admin', () => {
     });
 
     it('rejects an added registration without a real name', async () => {
-        const body = { action: 'create', registration: team({ members: [{ real_name: '', nickname: 'X' }] }) };
+        const body = { action: 'create', registration: team({ members: [{ program: 'SE.ba', real_name: '', nickname: 'X' }] }) };
 
         expect((await handleAdminAction(action(body), site, fakeDeps(), config)).status).toBe(422);
     });
@@ -357,14 +378,14 @@ describe('admin', () => {
     });
 
     it('leaves remote people out of the list of people on site', async () => {
-        const members = [{ real_name: 'On Site' }, { real_name: 'At Home', remote: true }];
+        const members = [{ program: 'SE.ba', real_name: 'On Site' }, { program: 'SE.ba', real_name: 'At Home', remote: true }];
         await handleCreate(post(team({ team_name: 'Mixed', members }), '9.9.9.9'), site, fakeDeps(), config);
         const onsite = await (await handleAdminExport(new URL('https://jam.example/api/admin/export?placement=onsite'), site, config)).text();
         const everyone = await (await handleAdminExport(new URL('https://jam.example/api/admin/export'), site, config)).text();
 
         expect(onsite).toContain('"On Site"');
         expect(onsite).not.toContain('At Home');
-        expect(everyone).toContain('"At Home","At Home","yes"');
+        expect(everyone).toContain('"At Home","At Home","yes","SE.ba"');
     });
 });
 

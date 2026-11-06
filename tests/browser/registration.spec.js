@@ -16,15 +16,18 @@ test('registers a team with a nickname and shows the placement', async ({ page }
     await page.goto('/game/register.html');
 
     await expect(page.locator('#seats-left')).toContainText('All seats on site are taken');
+    await expect(page.locator('#registration-intro')).toContainText('Register your team');
     await page.fill('#team_name', 'Night Owls');
     await page.fill('#contact_email', 'lead@example.org');
-    await page.check('input[name=programs][value="Game Design"]');
+    await expect(page.locator('input[name=programs]')).toHaveCount(0);
     const people = page.locator('.member');
     await expect(people).toHaveCount(2);
     await people.nth(0).locator('[data-field=real_name]').fill('Ann Real');
     await people.nth(0).locator('[data-field=nickname]').fill('Annie');
     await people.nth(0).locator('[data-field=show_as][value=nick]').check();
+    await people.nth(0).locator('[data-field=program]').selectOption('Game Design');
     await people.nth(1).locator('[data-field=real_name]').fill('Bo Real');
+    await people.nth(1).locator('[data-field=program]').selectOption('Software Engineering');
     await people.nth(1).locator('[data-field=remote]').check();
     await page.locator('#add-member').click();
     await expect(people).toHaveCount(3);
@@ -37,23 +40,27 @@ test('registers a team with a nickname and shows the placement', async ({ page }
 
     await expect(page.locator('#registration-message')).toContainText('waiting list');
     await expect(page.locator('#registration-form')).toBeHidden();
+    await expect(page.locator('#registration-intro')).toBeHidden();
     expect(sent).toMatchObject({
         team_name: 'Night Owls',
-        programs: ['Game Design'],
         wish: 'onsite_only',
         consent_privacy: true,
-        members: [{ real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', remote: false }, { real_name: 'Bo Real', show_as: 'real', remote: true }],
+        members: [
+            { real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', program: 'Game Design', remote: false },
+            { real_name: 'Bo Real', show_as: 'real', program: 'Software Engineering', remote: true },
+        ],
     });
 });
 
 test('explains validation errors from the server', async ({ page }) => {
     await page.route('**/api/registration', (route) => (route.request().method() === 'GET'
         ? route.fulfill({ json: { open: true, capacity: 10, seats_left: 5 } })
-        : route.fulfill({ status: 422, json: { error: 'validation', fields: ['members.1.real_name', 'consent_names'] } })));
+        : route.fulfill({ status: 422, json: { error: 'validation', fields: ['members.1.real_name', 'members.0.program', 'consent_names'] } })));
     await page.goto('/game/register.html');
     await page.locator('#registration-form button[type=submit]').click();
 
     await expect(page.locator('#registration-errors')).toContainText('Person 2: please enter the real name.');
+    await expect(page.locator('#registration-errors')).toContainText('Person 1: please choose from the list.');
     await expect(page.locator('#registration-errors')).toContainText('names may appear on the website');
     await expect(page.locator('#registration-form')).toBeVisible();
 });
@@ -64,13 +71,14 @@ test('hides the form when the server says registration is closed', async ({ page
 
     await expect(page.locator('#registration-closed')).toBeVisible();
     await expect(page.locator('#registration-form')).toBeHidden();
+    await expect(page.locator('#registration-intro')).toBeHidden();
 });
 
 test('loads, changes and cancels a registration with the link', async ({ page }) => {
     const registration = {
         team_name: 'Night Owls', contact_email: 'lead@example.org', programs: ['Software Engineering'], wish: 'onsite_only',
         comment: '', placement: 'remote', status: 'confirmed',
-        members: [{ real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', discord: 'ann', remote: true }],
+        members: [{ real_name: 'Ann Real', nickname: 'Annie', show_as: 'nick', discord: 'ann', program: 'Software Engineering', remote: true }],
     };
     const calls = [];
     await page.route('**/api/registration/self', (route) => {
@@ -90,7 +98,7 @@ test('loads, changes and cancels a registration with the link', async ({ page })
     await expect(page.locator('.member [data-field=nickname]')).toHaveValue('Annie');
     await expect(page.locator('input[name=wish][value=onsite_only]')).toBeChecked();
     await expect(page.locator('.member [data-field=remote]')).toBeChecked();
-    await expect(page.locator('input[name=programs][value="Software Engineering"]')).toBeChecked();
+    await expect(page.locator('.member [data-field=program]')).toHaveValue('Software Engineering');
     await expect(page.locator('input[name=consent_privacy]')).toHaveCount(0);
 
     await page.fill('#team_name', 'Night Owls 2');
@@ -106,7 +114,7 @@ test('loads, changes and cancels a registration with the link', async ({ page })
 
 test('lists registrations for the organisers and confirms one', async ({ page }) => {
     const actions = [];
-    const member = (real, nick, discord, remote = false) => ({ real_name: real, nickname: nick, show_as: nick ? 'nick' : 'real', discord, remote });
+    const member = (real, nick, discord, remote = false) => ({ real_name: real, nickname: nick, show_as: nick ? 'nick' : 'real', discord, program: 'Game Design', remote });
     const data = {
         year: 2025, capacity: 10, seats_taken: 4,
         registrations: [
@@ -127,8 +135,8 @@ test('lists registrations for the organisers and confirms one', async ({ page })
     await page.goto('/game/admin/registrations.html');
 
     await expect(page.locator('#admin-list article')).toHaveCount(2);
-    await expect(page.locator('#admin-list')).toContainText('Ann Real → shown as Annie · Discord: ann');
-    await expect(page.locator('#admin-list')).toContainText('Dee Real · remote');
+    await expect(page.locator('#admin-list')).toContainText('Ann Real → shown as Annie · Game Design · Discord: ann');
+    await expect(page.locator('#admin-list')).toContainText('Dee Real · Game Design · remote');
     await expect(page.locator('#admin-list')).toContainText('Not confirmed yet · On site · 5 people, 4 on site');
     await expect(page.locator('#admin-list')).toContainText('if full: waiting list');
     await expect(page.locator('#admin-list')).toContainText('Next on the waiting list, and 6 seats are free.');

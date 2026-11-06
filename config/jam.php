@@ -68,7 +68,8 @@ return [
                 'comment' => true,
             ],
             'programs' => [],
-            'programs_label' => 'Our team consists of people from…',
+            // Each person chooses one entry, for example the study programme.
+            'programs_label' => 'Study programme',
             'nickname_label' => 'Nickname',
             // Organisers who get a mail for each new or changed registration.
             'notify' => [],

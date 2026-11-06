@@ -167,12 +167,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 card.appendChild(element('p', 'mt-2 font-semibold text-green-800 dark:text-green-300', 'Next on the waiting list, and ' + free + ' seats are free.'));
             }
 
-            card.appendChild(element('p', 'text-sm mt-1', registration.contact_email + (registration.programs.length ? ' · ' + registration.programs.join(', ') : '') + (state.capacity ? ' · ' + label(registration.wish === 'remote' ? 'remote_wish' : registration.wish) : '')));
+            card.appendChild(element('p', 'text-sm mt-1', registration.contact_email + (state.capacity ? ' · ' + label(registration.wish === 'remote' ? 'remote_wish' : registration.wish) : '')));
 
             var people = element('ul', 'mt-2 list-disc pl-6');
             registration.members.forEach(function (member) {
                 var shownAs = member.show_as === 'nick' && member.nickname ? ' → shown as ' + member.nickname : '';
-                people.appendChild(element('li', '', member.real_name + shownAs + (member.discord ? ' · Discord: ' + member.discord : '') + (member.remote ? ' · remote' : '')));
+                people.appendChild(element('li', '', member.real_name + shownAs + (member.program ? ' · ' + member.program : '') + (member.discord ? ' · Discord: ' + member.discord : '') + (member.remote ? ' · remote' : '')));
             });
             card.appendChild(people);
 

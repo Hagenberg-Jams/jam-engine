@@ -17,6 +17,7 @@ return [
             'from' => 'noreply@example.test',
             'turnstile_site_key' => '1x00000000000000000000AA',
             'access' => ['team' => 'jams', 'aud' => 'aud-tag'],
+            'texts' => ['intro' => 'Register your team for the test jam.'],
         ],
     ],
 ];

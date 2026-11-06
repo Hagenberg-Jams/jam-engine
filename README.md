@@ -84,7 +84,8 @@ With `registration.form.enabled`, a site gets a registration form at `/register`
         'team_size' => [1, 6],
         'onsite_capacity' => 100,      // null: no limit
         'fields' => ['participation' => true, 'discord' => true, 'programs' => true, 'comment' => true],
-        'programs' => ['Media Technology and Design (MTD.ba)', '...'],
+        'programs' => ['Media Technology and Design (MTD.ba)', '...'],   // each person picks one
+        'programs_label' => 'Study programme',
         'nickname_label' => 'Nickname',
         'notify' => ['orga@example.org'],
         'from' => 'noreply@example.org',

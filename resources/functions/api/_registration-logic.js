@@ -39,8 +39,9 @@ export function isOpen(config, now) {
 
 /**
  * Checks and cleans the submitted form. Returns the data to store, or a list of errors for the form.
+ * Organisers who add a registration from an earlier form may leave out the programme of a person.
  */
-export function validate(input, config) {
+export function validate(input, config, { organisers = false } = {}) {
     const errors = [];
     const fields = config.fields;
     const data = {
@@ -64,11 +65,6 @@ export function validate(input, config) {
         errors.push('wish');
     }
 
-    if (fields.programs) {
-        const programs = Array.isArray(input.programs) ? input.programs : [];
-        data.programs = config.programs.filter((program) => programs.includes(program));
-    }
-
     const members = Array.isArray(input.members) ? input.members : [];
     members.forEach((member, index) => {
         const entry = {
@@ -76,6 +72,7 @@ export function validate(input, config) {
             nickname: text(member?.nickname, 60),
             show_as: member?.show_as === 'nick' ? 'nick' : 'real',
             discord: fields.discord ? text(member?.discord, 40) : '',
+            program: fields.programs && config.programs.includes(member?.program) ? member.program : '',
             remote: member?.remote === true || data.wish === 'remote',
         };
 
@@ -92,10 +89,16 @@ export function validate(input, config) {
             errors.push(`members.${index}.nickname`);
         }
 
+        if (fields.programs && config.programs.length > 0 && entry.program === '' && !organisers) {
+            errors.push(`members.${index}.program`);
+        }
+
         data.members.push(entry);
     });
 
     data.onsite = data.members.filter((member) => !member.remote).length;
+    // The programmes of the whole team, in the order of the config, for the overview in the admin page.
+    data.programs = config.programs.filter((program) => data.members.some((member) => member.program === program));
 
     const [min, max] = config.teamSize;
     if (data.members.length < min || data.members.length > max) {
@@ -129,8 +132,8 @@ END`;
 
 function memberStatements(db, id, members) {
     return members.map((member, position) =>
-        db.prepare('INSERT INTO members (registration_id, position, real_name, nickname, show_as, discord, remote) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            .bind(id, position, member.real_name, member.nickname, member.show_as, member.discord, member.remote ? 1 : 0),
+        db.prepare('INSERT INTO members (registration_id, position, real_name, nickname, show_as, discord, program, remote) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .bind(id, position, member.real_name, member.nickname, member.show_as, member.discord, member.program, member.remote ? 1 : 0),
     );
 }
 
@@ -191,7 +194,8 @@ function teamSummary(registration, config) {
     registration.members.forEach((member) => {
         const shown = displayName(member) === member.real_name ? '' : ` (shown as ${member.nickname})`;
         const discord = config.fields.discord && member.discord ? `, Discord: ${member.discord}` : '';
-        lines.push(`- ${member.real_name}${shown}${discord}${member.remote ? ', remote' : ''}`);
+        const program = member.program ? `, ${member.program}` : '';
+        lines.push(`- ${member.real_name}${shown}${program}${discord}${member.remote ? ', remote' : ''}`);
     });
 
     return lines.join('\n');
@@ -238,9 +242,21 @@ export function organiserMail(event, registration, config) {
     };
 }
 
-/** Sends a mail through the Cloudflare Email Service. A failed mail never fails the registration. */
+/**
+ * Sends a mail through the Cloudflare Email Service. A failed mail never fails the registration.
+ * A mail to several organisers goes to each one separately, so one bad address does not stop the others.
+ */
 export async function sendMail(deps, env, config, mail) {
-    if (!env.EMAIL_API_TOKEN || !env.CF_ACCOUNT_ID || !config.from || mail.to.length === 0) {
+    if (Array.isArray(mail.to)) {
+        const results = [];
+        for (const to of mail.to) {
+            results.push(await sendMail(deps, env, config, { ...mail, to }));
+        }
+
+        return results.length > 0 && results.every(Boolean);
+    }
+
+    if (!env.EMAIL_API_TOKEN || !env.CF_ACCOUNT_ID || !config.from || !mail.to) {
         return false;
     }
 
@@ -250,9 +266,14 @@ export async function sendMail(deps, env, config, mail) {
             headers: { authorization: `Bearer ${env.EMAIL_API_TOKEN}`, 'content-type': 'application/json' },
             body: JSON.stringify({ from: { address: config.from, name: config.siteName }, reply_to: config.replyTo || undefined, ...mail }),
         });
+        if (!response.ok) {
+            // Shows up in the logs of the Pages project, without the content of the mail.
+            console.error(`Mail "${mail.subject}" failed with ${response.status}: ${(await response.text().catch(() => '')).slice(0, 300)}`);
+        }
 
         return response.ok;
-    } catch {
+    } catch (error) {
+        console.error(`Mail "${mail.subject}" failed: ${error}`);
         return false;
     }
 }
@@ -409,7 +430,7 @@ export async function handleAdminAction(request, env, deps, config) {
 
     // Registrations from an earlier form. The team gets the link to check them and to choose the names shown.
     if (input.action === 'create') {
-        const { errors, data } = validate({ ...input.registration, consent_privacy: true, consent_names: true }, config);
+        const { errors, data } = validate({ ...input.registration, consent_privacy: true, consent_names: true }, config, { organisers: true });
         if (errors.length > 0) {
             return json(422, { error: 'validation', fields: errors });
         }
@@ -481,12 +502,12 @@ export async function handleAdminExport(url, env, config) {
     }
 
     const placement = url.searchParams.get('placement');
-    const rows = [['Team', 'Status', 'Placement', 'Real name', 'Shown as', 'Remote', 'Discord', 'Contact'].map(csvCell).join(',')];
+    const rows = [['Team', 'Status', 'Placement', 'Real name', 'Shown as', 'Remote', 'Programme', 'Discord', 'Contact'].map(csvCell).join(',')];
     registrations.filter((registration) => !placement || registration.placement === placement).forEach((registration) => {
         // The list of people on site leaves out the ones who take part remotely.
         registration.members.filter((member) => placement !== 'onsite' || !member.remote).forEach((member) => {
             rows.push([registration.team_name, registration.status, registration.placement, member.real_name, displayName(member),
-                member.remote ? 'yes' : 'no', member.discord, registration.contact_email].map(csvCell).join(','));
+                member.remote ? 'yes' : 'no', member.program ?? '', member.discord, registration.contact_email].map(csvCell).join(','));
         });
     });
 

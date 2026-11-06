@@ -41,7 +41,7 @@
         <div id="registration-message" class="hidden rounded-lg p-6 text-lg mb-8" role="status" aria-live="polite"></div>
 
         @if(!$edit && !empty($form['texts']['intro']))
-            <div class="prose dark:prose-invert max-w-none mb-8">{!! \Illuminate\Support\Str::markdown((string) $form['texts']['intro']) !!}</div>
+            <div id="registration-intro" class="{{ $open ? '' : 'hidden' }} prose dark:prose-invert max-w-none mb-8">{!! \Illuminate\Support\Str::markdown((string) $form['texts']['intro']) !!}</div>
         @endif
 
         <form id="registration-form" class="{{ $open || $edit ? '' : 'hidden' }} space-y-8" novalidate
@@ -58,16 +58,6 @@
                     <input id="contact_email" name="contact_email" type="email" maxlength="200" required class="{{ $input }}" autocomplete="email">
                     <p class="{{ $hint }}">We send the confirmation and the link to change your registration to this address. It is never shown on the website.</p>
                 </div>
-                @if($fields['programs'] && !empty($form['programs']))
-                    <div>
-                        <p class="{{ $label }}">{{ $form['programs_label'] }}</p>
-                        <div class="grid sm:grid-cols-2 gap-2">
-                            @foreach($form['programs'] as $program)
-                                <label class="flex items-start gap-2"><input type="checkbox" name="programs" value="{{ $program }}" class="mt-1"> <span>{{ $program }}</span></label>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
             </fieldset>
 
             <fieldset>
@@ -97,6 +87,15 @@
                             <label class="flex items-center gap-2"><input type="radio" data-field="show_as" value="real" checked> real name</label>
                             <label class="flex items-center gap-2"><input type="radio" data-field="show_as" value="nick"> {{ strtolower($form['nickname_label']) }}</label>
                         </div>
+                        @if($fields['programs'] && !empty($form['programs']))
+                            <label class="block"><span class="{{ $label }}">{{ $form['programs_label'] }}</span>
+                                <select data-field="program" class="{{ $input }}">
+                                    <option value="">Please choose…</option>
+                                    @foreach($form['programs'] as $program)
+                                        <option value="{{ $program }}">{{ $program }}</option>
+                                    @endforeach
+                                </select></label>
+                        @endif
                         @if($fields['discord'])
                             <label class="block"><span class="{{ $label }}">Discord username (optional)</span><input data-field="discord" maxlength="40" class="{{ $input }}"></label>
                         @endif
@@ -168,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var addButton = document.getElementById('add-member');
     var message = document.getElementById('registration-message');
     var errorBox = document.getElementById('registration-errors');
+    var intro = document.getElementById('registration-intro');
     var contact = @json((string) config('jam.email'));
     var token = new URLSearchParams(location.hash.slice(1)).get('t') || location.hash.slice(1);
     var placements = {
@@ -219,7 +219,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return {
             team_name: value('team_name'),
             contact_email: value('contact_email'),
-            programs: Array.prototype.map.call(form.querySelectorAll('input[name=programs]:checked'), function (box) { return box.value; }),
             wish: checked ? checked.value : 'onsite_preferred',
             comment: value('comment'),
             website: value('website'),
@@ -256,7 +255,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return fields.map(function (field) {
             var match = field.match(/^members\.(\d+)\.(\w+)$/);
             if (match) {
-                return 'Person ' + (Number(match[1]) + 1) + ': ' + (match[2] === 'real_name' ? 'please enter the real name.' : 'please enter the name to show, or show the real name.');
+                var problems = {
+                    real_name: 'please enter the real name.',
+                    nickname: 'please enter the name to show, or show the real name.',
+                    program: 'please choose from the list.'
+                };
+                return 'Person ' + (Number(match[1]) + 1) + ': ' + (problems[match[2]] || match[2]);
             }
             return labels[field] || field;
         }).join(' ');
@@ -302,6 +306,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             form.classList.add('hidden');
+            if (intro) {
+                intro.classList.add('hidden');
+            }
             show(message, 'Thank you! Your registration is received, and you will get a mail with a link to change it. ' + (placements[result.data.placement] || '') + ' We will confirm your registration soon.', 'ok');
         }).catch(function () { fail({ data: {} }); });
     });
@@ -331,7 +338,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (form.elements.comment) {
                 form.elements.comment.value = registration.comment;
             }
-            form.querySelectorAll('input[name=programs]').forEach(function (box) { box.checked = registration.programs.indexOf(box.value) !== -1; });
             form.querySelectorAll('input[name=wish]').forEach(function (radio) { radio.checked = radio.value === registration.wish; });
             registration.members.forEach(addMember);
             show(message, placements[registration.placement] + (registration.status === 'confirmed' ? ' Your registration is confirmed.' : ' Your registration is not confirmed yet.'), 'ok');
@@ -349,6 +355,9 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch('/api/registration', { cache: 'no-store' }).then(function (response) { return response.json(); }).then(function (status) {
         if (!status.open) {
             form.classList.add('hidden');
+            if (intro) {
+                intro.classList.add('hidden');
+            }
             document.getElementById('registration-closed').classList.remove('hidden');
         }
         var seats = document.getElementById('seats-left');

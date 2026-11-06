@@ -99,7 +99,7 @@ class Registration
      */
     protected static function notify(array $configured): array
     {
-        $secret = explode(',', self::string(env('JAM_REGISTRATION_NOTIFY', '')));
+        $secret = preg_split('/[\s,;]+/', self::string(env('JAM_REGISTRATION_NOTIFY', ''))) ?: [];
         $addresses = array_map(fn(mixed $address): string => trim(self::string($address)), [...$configured, ...$secret]);
 
         return array_values(array_unique(array_filter($addresses, fn(string $address): bool => $address !== '')));
