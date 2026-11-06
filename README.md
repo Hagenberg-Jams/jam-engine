@@ -9,7 +9,7 @@ Reusable [HydePHP](https://hydephp.com) engine for the websites of the Hagenberg
 ```json
 {
     "repositories": [{ "type": "vcs", "url": "https://github.com/Hagenberg-Jams/jam-engine" }],
-    "require": { "hagenberg-jams/jam-engine": "dev-main" }
+    "require": { "hagenberg-jams/jam-engine": "^0.2" }
 }
 ```
 
@@ -133,7 +133,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@main
+    uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@v0.2.0
     with:
       project-name: my-jam
       site-url: https://example.org
@@ -141,6 +141,27 @@ jobs:
 ```
 
 The daily run removes past events from the home page and writes a released topic into the HTML.
+
+The workflow is pinned to the same release as the package, so a change to the build or the deployment only reaches a site through a pull request in that site.
+
+## Releases and updates
+
+1. Build a feature on a branch of this repository. New features are off by default and switched on in the `config/jam.php` of a site.
+2. To try it on a site before the release, open a branch in the site repository that points to the engine branch, and open a pull request there. Its preview shows the feature:
+
+   ```json
+   "hagenberg-jams/jam-engine": "dev-my-feature"
+   ```
+
+   ```yaml
+   uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@my-feature
+   ```
+
+3. Merge the feature here and tag a release, for example `git tag -a v0.3.0 -m "..." && git push origin v0.3.0`. The release workflow runs the tests and creates the GitHub release.
+4. Dependabot opens two pull requests in every site within a week: `composer` for the package and `actions` for the workflow. **Merge both**, so that package and workflow have the same version. Under **Insights → Dependency graph → Dependabot**, **Check for updates** starts it right away.
+5. Check the preview of each pull request, then merge. To publish a feature on all sites at the same time, merge the pull requests of all sites one after the other.
+
+Do not merge engine updates into a site from one week before its jam until the end of its voting, unless they fix a problem.
 
 ## Commands
 
