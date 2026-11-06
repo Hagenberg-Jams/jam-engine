@@ -12,7 +12,7 @@
         "@tailwindcss/vite": "^4.3.3",
         "glightbox": "^3.3.1",
         "hydefront": "^4.0.0",
-        "swiper": "^14.2.0",
+        "swiper": "^14.4.0",
         "tailwindcss": "^4.3.3",
         "vite": "^8.3.5",
         "vitest": "^5.0.5"
