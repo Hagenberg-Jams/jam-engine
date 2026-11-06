@@ -121,6 +121,17 @@ describe('registering', () => {
         expect(site.JAM_DB.sqlite.prepare('SELECT COUNT(*) AS n FROM members').get().n).toBe(2);
     });
 
+    it('links to the host the registration came from, for example a preview', async () => {
+        const deps = fakeDeps();
+        const request = new Request('https://abc.preview.example/api/registration', {
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(team()),
+        });
+        await handleCreate(request, site, deps, config);
+
+        expect(deps.mails[0].text).toContain('https://abc.preview.example/register/edit#');
+        expect(deps.mails[1].text).toContain('https://abc.preview.example/admin/registrations');
+    });
+
     it('never stores the edit token itself', async () => {
         const deps = fakeDeps();
         await handleCreate(post(team()), site, deps, config);

@@ -26,6 +26,13 @@ function randomToken() {
     return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/**
+ * Links in mails point to the host the request came from, so that a preview sends preview links.
+ */
+export function forRequest(request, config) {
+    return { ...config, siteUrl: new URL(request.url).origin };
+}
+
 export function isOpen(config, now) {
     return config.active && (!config.deadline || now <= Date.parse(config.deadline));
 }
@@ -250,6 +257,7 @@ export async function handleStatus(env, deps, config) {
 }
 
 export async function handleCreate(request, env, deps, config) {
+    config = forRequest(request, config);
     if (!isOpen(config, deps.now)) {
         return json(403, { error: 'closed' });
     }
@@ -308,6 +316,7 @@ async function byToken(request, env) {
 }
 
 export async function handleSelf(request, env, deps, config) {
+    config = forRequest(request, config);
     const registration = await byToken(request, env);
     if (!registration || registration.status === 'cancelled') {
         return json(404, { error: 'not_found' });
@@ -374,6 +383,7 @@ export async function handleAdminList(env, config) {
 }
 
 export async function handleAdminAction(request, env, deps, config) {
+    config = forRequest(request, config);
     const input = await request.json().catch(() => ({}));
     const db = env.JAM_DB;
     const registration = await findRegistration(db, 'id', input.id ?? '');
