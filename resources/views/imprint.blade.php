@@ -73,7 +73,7 @@
                         'the real name of every person',
                         'optionally a nickname and the choice which of the two names appears on the website',
                         $registrationFields['discord'] ? 'Discord usernames' : null,
-                        $registrationFields['programs'] ? 'the study programmes of the team' : null,
+                        $registrationFields['programs'] ? 'the study programme of every person' : null,
                         $registrationFields['participation'] ? 'how the team takes part' : null,
                         $registrationFields['comment'] ? 'your comment' : null,
                     ]);
