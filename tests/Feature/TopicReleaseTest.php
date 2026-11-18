@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 const SECRET_TOPIC = 'SECRET-TOPIC-XYZ';
 const SECRET_VIDEO = 'secretVideo1';
-const SECRETS = ['JAM_TOPIC' => SECRET_TOPIC, 'JAM_TOPIC_VIDEO' => SECRET_VIDEO];
+const SECRET_DESCRIPTION = "SECRET-DESCRIPTION-LINE-ONE\nSECRET-DESCRIPTION-LINE-TWO";
+const SECRETS = ['JAM_TOPIC' => SECRET_TOPIC, 'JAM_TOPIC_VIDEO' => SECRET_VIDEO, 'JAM_TOPIC_DESCRIPTION' => SECRET_DESCRIPTION];
 const BEFORE = '2026-11-20T17:59:59+01:00';
 const AFTER = '2026-11-20T18:00:01+01:00';
 
@@ -13,7 +14,8 @@ it('never deploys the secrets before the release', function (): void {
 
     expect(deployedFiles($site))->not->toBeEmpty()
         ->and(deployedContains($site, SECRET_TOPIC))->toBeFalse()
-        ->and(deployedContains($site, SECRET_VIDEO))->toBeFalse();
+        ->and(deployedContains($site, SECRET_VIDEO))->toBeFalse()
+        ->and(deployedContains($site, 'SECRET-DESCRIPTION'))->toBeFalse();
 });
 
 it('shows the countdown before the release', function (): void {
@@ -28,7 +30,7 @@ it('shows the countdown before the release', function (): void {
 
 it('removes a topic from the data before the release, even if validation were skipped', function (): void {
     $site = fixtureCopy('animation');
-    file_put_contents("{$site}/_data/jams/2026.yaml", "title: '2026'\ntopic: 'LEAK'\ntopic_video: 'leakVideo'\ntopic_release: '2026-11-20T18:00:00+01:00'\n");
+    file_put_contents("{$site}/_data/jams/2026.yaml", "title: '2026'\ntopic: 'LEAK'\ntopic_video: 'leakVideo'\ntopic_description: 'LEAK'\ntopic_release: '2026-11-20T18:00:00+01:00'\n");
     file_put_contents("{$site}/probe.php", <<<'PHP'
         <?php
         require getenv('JAM_ENGINE_ROOT') . '/vendor/autoload.php';
@@ -47,7 +49,8 @@ it('removes a topic from the data before the release, even if validation were sk
 
     expect($jam['title'])->toBe('2026')
         ->and($jam)->not->toHaveKey('topic')
-        ->and($jam)->not->toHaveKey('topic_video');
+        ->and($jam)->not->toHaveKey('topic_video')
+        ->and($jam)->not->toHaveKey('topic_description');
 });
 
 it('reports a topic in the data before the release', function (): void {
@@ -58,6 +61,18 @@ it('reports a topic in the data before the release', function (): void {
 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getOutput() . $process->getErrorOutput())->toContain('remove topic');
+});
+
+it('reports a video or description in the data before the release', function (): void {
+    $site = fixtureCopy('animation');
+    file_put_contents("{$site}/_data/jams/2026.yaml", "title: '2026'\ntopic_video: 'leakVideo'\ntopic_description: 'LEAK'\ntopic_release: '2026-11-20T18:00:00+01:00'\n");
+
+    $process = runHyde($site, 'jam:validate', now: BEFORE);
+    $output = $process->getOutput() . $process->getErrorOutput();
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($output)->toContain('remove topic_video')->toContain('JAM_TOPIC_VIDEO')
+        ->and($output)->toContain('remove topic_description')->toContain('JAM_TOPIC_DESCRIPTION');
 });
 
 it('stops the build when the data contains the topic too early', function (): void {
@@ -81,8 +96,22 @@ it('accepts the topic in the data after the release', function (): void {
 it('renders the topic into the page in the first build after the release', function (): void {
     $site = buildSite('animation', SECRETS, AFTER);
 
-    expect(page($site, 'index.html'))->toContain(SECRET_TOPIC)->toContain('data-revealed="true"')->toContain(SECRET_VIDEO)
-        ->and(page($site, '2026.html'))->toContain(SECRET_TOPIC);
+    expect(page($site, 'index.html'))->toContain(SECRET_TOPIC)->toContain('data-revealed="true"')->toContain(SECRET_VIDEO)->toContain(SECRET_DESCRIPTION)
+        ->and(page($site, '2026.html'))->toContain(SECRET_TOPIC)->toContain(SECRET_DESCRIPTION);
+});
+
+it('escapes the description and keeps its line breaks', function (): void {
+    $site = buildSite('animation', ['JAM_TOPIC' => SECRET_TOPIC, 'JAM_TOPIC_DESCRIPTION' => "First line\n<b>Second</b> line"], AFTER);
+    $escaped = "First line\n&lt;b&gt;Second&lt;/b&gt; line";
+
+    expect(page($site, 'index.html'))->toContain($escaped)->not->toContain('<b>Second</b>')
+        ->and(page($site, '2026.html'))->toContain($escaped);
+});
+
+it('hides the description block without a description', function (): void {
+    $html = page(buildSite('animation', ['JAM_TOPIC' => SECRET_TOPIC], AFTER), 'index.html');
+
+    expect($html)->toMatch('/id="topic-description" class="\\s*hidden/');
 });
 
 it('does not apply the secret to older jams', function (): void {

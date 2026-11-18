@@ -18,7 +18,7 @@ async function mockTopic(page, { before = true } = {}) {
         if (now < RELEASE) {
             await route.fulfill({ status: 403, json: { released: false, now } });
         } else {
-            await route.fulfill({ status: 200, json: { released: true, now, topic: 'Surprise Topic', video: 'revealVideo1' } });
+            await route.fulfill({ status: 200, json: { released: true, now, topic: 'Surprise Topic', video: 'revealVideo1', description: 'First line\n<b>Second</b> line' } });
         }
     });
 }
@@ -80,11 +80,15 @@ test.describe('topic release', () => {
         await expect(page.locator('#topic-revealed')).toBeHidden();
         await expect(page.locator('[data-unit="seconds"]')).toHaveText(/0[1-3]/);
         await expect(page.locator('body')).not.toContainText('Surprise Topic');
+        await expect(page.locator('#topic-description')).toBeHidden();
 
         await page.clock.runFor(4000);
 
         await expect(page.locator('#topic-text')).toHaveText('Surprise Topic');
         await expect(page.locator('#topic-countdown')).toBeHidden();
+        await expect(page.locator('#topic-description')).toBeVisible();
+        await expect(page.locator('#topic-description')).toHaveText('First line\n<b>Second</b> line');
+        await expect(page.locator('#topic-description b')).toHaveCount(0);
     });
 
     test('reveals immediately on a page built before the release but opened after it', async ({ page }) => {

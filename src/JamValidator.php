@@ -67,8 +67,12 @@ class JamValidator
 
         $release = $this->invalidDate($jam['topic_release'] ?? null) ? null : JamSchedule::parse($jam['topic_release'] ?? null);
 
-        if ($release !== null && CarbonImmutable::now()->lessThan($release) && ($jam['topic'] ?? '') !== '') {
-            $this->errors[] = "{$name}: remove topic, it would be public before topic_release. Set it as the JAM_TOPIC secret instead.";
+        if ($release !== null && CarbonImmutable::now()->lessThan($release)) {
+            foreach (JamData::TOPIC_SECRETS as $field => $secret) {
+                if (($jam[$field] ?? '') !== '') {
+                    $this->errors[] = "{$name}: remove {$field}, it would be public before topic_release. Set it as the {$secret} secret instead.";
+                }
+            }
         }
     }
 

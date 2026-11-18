@@ -7,6 +7,15 @@ namespace HagenbergJams\JamEngine;
  */
 class JamData
 {
+    /**
+     * The fields of a jam that stay secret until the topic release, each with the secret that holds it.
+     */
+    public const TOPIC_SECRETS = [
+        'topic' => 'JAM_TOPIC',
+        'topic_video' => 'JAM_TOPIC_VIDEO',
+        'topic_description' => 'JAM_TOPIC_DESCRIPTION',
+    ];
+
     /** @var array<string, mixed> */
     protected static array $cache = [];
 
@@ -166,21 +175,20 @@ class JamData
     protected static function applyTopic(int $year, array $jam): array
     {
         if (JamSchedule::isTopicPending($jam)) {
-            unset($jam['topic'], $jam['topic_video']);
+            foreach (array_keys(self::TOPIC_SECRETS) as $field) {
+                unset($jam[$field]);
+            }
 
             return $jam;
         }
 
         if (JamSchedule::topicRelease($jam) !== null && $year === self::latestYearWithTopicRelease()) {
-            $topic = env('JAM_TOPIC');
-            $video = env('JAM_TOPIC_VIDEO');
+            foreach (self::TOPIC_SECRETS as $field => $secret) {
+                $value = env($secret);
 
-            if (empty($jam['topic']) && is_string($topic) && $topic !== '') {
-                $jam['topic'] = $topic;
-            }
-
-            if (empty($jam['topic_video']) && is_string($video) && $video !== '') {
-                $jam['topic_video'] = $video;
+                if (empty($jam[$field]) && is_string($value) && $value !== '') {
+                    $jam[$field] = $value;
+                }
             }
         }
 

@@ -14,6 +14,9 @@
         @if($jam && isset($jam['topic']))
             <p class="text-xl text-primary-200 mb-4">{{ $jam['topic'] }}</p>
         @endif
+        @if($jam && !empty($jam['topic_description']) && is_string($jam['topic_description']))
+            <p class="max-w-3xl text-primary-100 mb-4 whitespace-pre-line">{{ $jam['topic_description'] }}</p>
+        @endif
         @if($jam && (isset($jam['startdate']) || isset($jam['enddate']) || isset($jam['hours'])))
             <p class="text-primary-200">
                 @if(isset($jam['startdate']) && isset($jam['enddate']))

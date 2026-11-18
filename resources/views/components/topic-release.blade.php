@@ -1,12 +1,14 @@
 {{--
-    Countdown to the topic release. Before the release, neither the topic nor the video is part of this page:
-    the script fetches them from /api/topic, which only answers after the release time.
+    Countdown to the topic release. Before the release, neither the topic nor its video or description is part
+    of this page: the script fetches them from /api/topic, which only answers after the release time.
+    The description is plain text, its line breaks are kept.
     Expected: $year, $jam, $release.
 --}}
 @php
     $pending = \HagenbergJams\JamEngine\JamSchedule::isTopicPending($jam);
     $topic = $pending ? null : ($jam['topic'] ?? null);
     $topicVideo = $pending ? null : ($jam['topic_video'] ?? null);
+    $topicDescription = $pending ? null : ($jam['topic_description'] ?? null);
 @endphp
 
 <section id="topic-release" class="py-16 bg-gray-900 text-white" aria-labelledby="topic-release-heading"
@@ -29,6 +31,7 @@
         <div id="topic-revealed" class="@unless($topic) hidden @endunless mt-8" aria-live="polite">
             <p class="uppercase tracking-wide text-sm text-primary-400 font-semibold">The topic is</p>
             <p id="topic-text" class="text-4xl md:text-6xl font-bold mt-2">{{ $topic }}</p>
+            <p id="topic-description" class="@unless($topicDescription) hidden @endunless max-w-3xl mx-auto mt-6 text-lg text-gray-300 whitespace-pre-line">{{ $topicDescription }}</p>
         </div>
 
         <div id="topic-video" class="@unless($topicVideo) hidden @endunless max-w-4xl mx-auto mt-8 text-left">
@@ -64,6 +67,12 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('topic-text').textContent = data.topic;
         countdown.classList.add('hidden');
         document.getElementById('topic-revealed').classList.remove('hidden');
+
+        if (data.description) {
+            var description = document.getElementById('topic-description');
+            description.textContent = data.description;
+            description.classList.remove('hidden');
+        }
 
         if (data.video) {
             var embed = document.querySelector('#topic-video .youtube-embed');

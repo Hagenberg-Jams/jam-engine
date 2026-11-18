@@ -123,6 +123,17 @@ it('refuses a future topic release while the topic is in the file', function ():
         ->and((string) file_get_contents("{$site}/_data/jams/2025.yaml"))->not->toContain('topic_release');
 });
 
+it('refuses a future topic release while a topic description is in the file', function (): void {
+    $site = fixtureCopy('animation');
+    file_put_contents("{$site}/_data/jams/2027.yaml", "title: '2027'\ntopic_description: 'Too early'\n");
+
+    $process = runHyde($site, 'jam:topic-release 2027-11-19 18:00 --year=2027');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getOutput() . $process->getErrorOutput())->toContain('topic_description')->toContain('JAM_TOPIC_DESCRIPTION')
+        ->and((string) file_get_contents("{$site}/_data/jams/2027.yaml"))->not->toContain('topic_release');
+});
+
 it('rejects a malformed topic release', function (): void {
     $site = fixtureCopy('animation');
 

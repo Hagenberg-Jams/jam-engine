@@ -56,8 +56,11 @@ class TopicReleaseCommand extends Command
         }
 
         // A topic in the file would be public before the release, see the README of the engine.
-        if (!empty($jam['topic']) && CarbonImmutable::now()->lessThan($release)) {
-            $this->error('Remove topic from the YAML file first and store it as the JAM_TOPIC secret on GitHub.');
+        $public = array_filter(JamData::TOPIC_SECRETS, fn(string $field): bool => !empty($jam[$field]), ARRAY_FILTER_USE_KEY);
+        if ($public !== [] && CarbonImmutable::now()->lessThan($release)) {
+            $fields = implode(', ', array_keys($public));
+            $secrets = implode(', ', $public);
+            $this->error("Remove {$fields} from the YAML file first and store it as {$secrets} on GitHub.");
             return 1;
         }
 

@@ -58,7 +58,23 @@ enddate: '2026-11-22T21:00:00+01:00'
 topic_release: '2026-11-20T18:00:00+01:00'
 ```
 
-Store the topic as the GitHub secret `JAM_TOPIC`, and optionally a YouTube ID as `JAM_TOPIC_VIDEO`. The next deployment from `main` transfers both to Cloudflare as one secret, `JAM_TOPIC_DATA`, together with the year of the jam. The function ignores a topic for any other year, so a secret left over from an earlier jam never needs to be deleted in Cloudflare. The page shows a countdown, and a Pages Function hands out the topic from the release time on. After the jam, add the topic to the YAML file as `topic:`.
+Store the topic and what belongs to it as GitHub secrets:
+
+| Secret | Content | YAML field after the jam |
+| --- | --- | --- |
+| `JAM_TOPIC` | The topic itself | `topic` |
+| `JAM_TOPIC_VIDEO` | Optional YouTube ID of a reveal video, not the URL | `topic_video` |
+| `JAM_TOPIC_DESCRIPTION` | Optional plain text that explains the topic. Line breaks are kept, Markdown and HTML are not rendered. | `topic_description` |
+
+The next deployment from `main` transfers them to Cloudflare as one secret, `JAM_TOPIC_DATA`, together with the year of the jam. The function ignores a topic for any other year, so a secret left over from an earlier jam never needs to be deleted in Cloudflare. The page shows a countdown, and a Pages Function hands out the topic, video and description from the release time on. If this year's jam has no video or description, delete `JAM_TOPIC_VIDEO` or `JAM_TOPIC_DESCRIPTION` on GitHub, otherwise last year's value is shown with the new topic. After the jam, add the values to the YAML file. The year page shows the topic and the description:
+
+```yaml
+topic: 'Hidden Worlds'
+topic_description: |
+  Everything has a side that nobody sees.
+
+  Show it.
+```
 
 To set, change or remove the time later, use the command. It only changes the `topic_release` line:
 
@@ -68,7 +84,7 @@ php hyde jam:topic-release 2026-11-20 19:00 --year=2026
 php hyde jam:topic-release --remove
 ```
 
-The build fails if `topic:` is in the YAML file before the release time.
+The build fails if `topic:`, `topic_video:` or `topic_description:` is in the YAML file before the release time.
 
 ## Registration form
 

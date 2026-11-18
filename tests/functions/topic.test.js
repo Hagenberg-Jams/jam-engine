@@ -4,23 +4,24 @@ import { respond } from '../../resources/functions/api/_topic-logic.js';
 const config = { year: 2026, release: '2026-11-20T18:00:00+01:00' };
 const release = Date.parse(config.release);
 const secret = (data) => ({ JAM_TOPIC_DATA: JSON.stringify(data) });
-const env = secret({ year: 2026, topic: 'Secret Topic', video: 'secretVideo1' });
+const env = secret({ year: 2026, topic: 'Secret Topic', video: 'secretVideo1', description: 'Secret Description' });
 
 describe('topic function', () => {
-    it('keeps topic and video secret before the release', async () => {
+    it('keeps topic, video and description secret before the release', async () => {
         const response = respond(env, release - 1, config);
         const text = await response.text();
 
         expect(response.status).toBe(403);
         expect(text).not.toContain('Secret Topic');
         expect(text).not.toContain('secretVideo1');
+        expect(text).not.toContain('Secret Description');
     });
 
-    it('returns topic and video from the exact release time on', async () => {
+    it('returns topic, video and description from the exact release time on', async () => {
         const response = respond(env, release, config);
 
         expect(response.status).toBe(200);
-        expect(await response.json()).toMatchObject({ released: true, year: 2026, topic: 'Secret Topic', video: 'secretVideo1' });
+        expect(await response.json()).toMatchObject({ released: true, year: 2026, topic: 'Secret Topic', video: 'secretVideo1', description: 'Secret Description' });
     });
 
     it('sends the server time so that clients can correct their clock', async () => {
@@ -34,6 +35,11 @@ describe('topic function', () => {
 
     it('works without a video', async () => {
         expect((await respond(secret({ year: 2026, topic: 'Topic', video: null }), release, config).json()).video).toBeNull();
+    });
+
+    it('works without a description, also with a secret written before descriptions existed', async () => {
+        expect((await respond(secret({ year: 2026, topic: 'Topic', description: null }), release, config).json()).description).toBeNull();
+        expect((await respond(secret({ year: 2026, topic: 'Topic' }), release, config).json()).description).toBeNull();
     });
 
     it('reports a missing secret instead of an empty topic', async () => {

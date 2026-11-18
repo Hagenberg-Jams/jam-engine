@@ -1,5 +1,5 @@
 /**
- * Reads the JAM_TOPIC_DATA secret, which the site workflow writes as {"year", "topic", "video"}.
+ * Reads the JAM_TOPIC_DATA secret, which the site workflow writes as {"year", "topic", "video", "description"}.
  * A topic for another year counts as missing, so a secret left over from an earlier jam is never shown.
  */
 function topicFor(env, year) {
@@ -13,7 +13,7 @@ function topicFor(env, year) {
 }
 
 /**
- * Answers the topic request. The topic and video only leave the server after the release time.
+ * Answers the topic request. The topic, video and description only leave the server after the release time.
  *
  * @param {{ JAM_TOPIC_DATA?: string }} env Cloudflare secrets
  * @param {number} now Current time in milliseconds
@@ -38,5 +38,5 @@ export function respond(env, now, config) {
         return json(503, { released: true, error: 'topic not configured' });
     }
 
-    return json(200, { released: true, year: config.year, topic: data.topic, video: data.video || null });
+    return json(200, { released: true, year: config.year, topic: data.topic, video: data.video || null, description: data.description || null });
 }
