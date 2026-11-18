@@ -18,7 +18,7 @@ jobs:
           coverage: none
       - name: Install ImageMagick 7 for the image commands
         run: |
-          gh release download -R ImageMagick/ImageMagick -p '*-gcc-x86_64.AppImage' -O magick
+          gh release download -R ImageMagick/ImageMagick -p '*x86_64.AppImage' -O magick
           chmod +x magick
           sudo mv magick /usr/local/bin/magick
           echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
