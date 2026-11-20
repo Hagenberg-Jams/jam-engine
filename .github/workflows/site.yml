@@ -147,24 +147,31 @@ jobs:
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets"
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" -H "cf-r2-jurisdiction: eu")
-          for suffix in "" "-preview"; do
-            name="$PROJECT-submissions$suffix"
+          # A bucket that cannot be found is not bound, because a binding to a missing bucket stops every deployment.
+          # The upload page then answers that uploads are not set up.
+          for environment in production preview; do
+            name="$PROJECT-submissions"
+            if [ "$environment" = "preview" ]; then name="$name-preview"; fi
             status=$(curl -sS -o /dev/null -w '%{http_code}' "${auth[@]}" "$api/$name")
             if [ "$status" = "404" ]; then
               curl -fsS "${auth[@]}" -X POST "$api" -d "$(jq -n --arg name "$name" '{name: $name}')" > /dev/null
               echo "Created the bucket $name."
-            elif [ "$status" != "200" ]; then
-              echo "::warning::Cannot check the bucket $name ($status). Give the deploy token \"Workers R2 Storage: Edit\", or create the bucket in the EU jurisdiction by hand."
+              status=200
+            fi
+            if [ "$status" = "200" ]; then
+              echo "$environment=$name" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::Cannot check the bucket $name ($status), so uploads are off. Give the deploy token \"Workers R2 Storage: Edit\", or create the bucket in the EU jurisdiction by hand."
             fi
           done
-          echo "production=$PROJECT-submissions" >> "$GITHUB_OUTPUT"
-          echo "preview=$PROJECT-submissions-preview" >> "$GITHUB_OUTPUT"
 
       # One update of the Pages project for the database, the bucket and the variables of the functions.
+      # A pull request only changes the preview settings, everything else the production settings.
       # It runs before the topic step, so that the topic secret is uploaded last, whatever the API does with existing variables.
       - name: Configure the Pages project
         if: steps.registration.outcome == 'success' || steps.submission.outcome == 'success'
         env:
+          TARGET: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PROJECT: ${{ inputs.project-name }}
@@ -179,7 +186,7 @@ jobs:
           set -euo pipefail
           body=$(jq -n --arg account "$CLOUDFLARE_ACCOUNT_ID" --arg turnstile "$TURNSTILE_SECRET" --arg mail "$EMAIL_API_TOKEN" \
             --arg code "$JAM_SUBMISSION_CODE" --arg dbProduction "$DB_PRODUCTION" --arg dbPreview "$DB_PREVIEW" \
-            --arg bucketProduction "$BUCKET_PRODUCTION" --arg bucketPreview "$BUCKET_PREVIEW" '
+            --arg bucketProduction "$BUCKET_PRODUCTION" --arg bucketPreview "$BUCKET_PREVIEW" --arg target "$TARGET" '
             def secret($name; $value): if $value == "" then {} else {($name): {type: "secret_text", value: $value}} end;
             def environment($db; $bucket):
               (if $db == "" then {} else {d1_databases: {JAM_DB: {id: $db}}} end)
@@ -187,12 +194,13 @@ jobs:
               + {env_vars: ({CF_ACCOUNT_ID: {type: "plain_text", value: $account}}
                 + secret("TURNSTILE_SECRET"; $turnstile) + secret("EMAIL_API_TOKEN"; $mail)
                 + (if $bucket == "" then {} else secret("JAM_SUBMISSION_CODE"; $code) end))};
-            {deployment_configs: {production: environment($dbProduction; $bucketProduction), preview: environment($dbPreview; $bucketPreview)}}')
+            if $target == "production" then {deployment_configs: {production: environment($dbProduction; $bucketProduction)}}
+            else {deployment_configs: {preview: environment($dbPreview; $bucketPreview)}} end')
           curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
             -X PATCH "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" -d "$body" > /dev/null
           if [ -z "$EMAIL_API_TOKEN" ]; then echo "::warning::EMAIL_API_TOKEN is not set, so the functions send no mails."; fi
           if [ -z "$TURNSTILE_SECRET" ]; then echo "::warning::TURNSTILE_SECRET is not set, so every form fails the spam check."; fi
-          if [ -n "$BUCKET_PRODUCTION" ] && [ -z "$JAM_SUBMISSION_CODE" ]; then echo "::warning::JAM_SUBMISSION_CODE is not set, so nobody can upload."; fi
+          if [ -n "$BUCKET_PRODUCTION$BUCKET_PREVIEW" ] && [ -z "$JAM_SUBMISSION_CODE" ]; then echo "::warning::JAM_SUBMISSION_CODE is not set, so nobody can upload."; fi
 
       - name: Transfer the topic to Cloudflare
         if: steps.deploy.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
@@ -219,6 +227,7 @@ jobs:
           PROJECT: ${{ inputs.project-name }}
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
+          set -o pipefail
           npx --yes wrangler@4 pages deploy _site --project-name="$PROJECT" --branch="$BRANCH" | tee deploy.log
           echo "url=$(grep -oE 'https://[^ ]+\.pages\.dev' deploy.log | head -1)" >> "$GITHUB_OUTPUT"
 
