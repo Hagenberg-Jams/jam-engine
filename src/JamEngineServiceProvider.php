@@ -9,7 +9,6 @@ use HagenbergJams\JamEngine\Actions\AValidateDataBuildTask;
 use HagenbergJams\JamEngine\Actions\CopyGamesBuildTask;
 use HagenbergJams\JamEngine\Actions\CopyHtaccessBuildTask;
 use HagenbergJams\JamEngine\Actions\CopyRobotsTxtBuildTask;
-use HagenbergJams\JamEngine\Actions\GeneratePagesBuildTask;
 use HagenbergJams\JamEngine\Actions\PreBuildTasks\TransferMediaAssets;
 use HagenbergJams\JamEngine\Actions\PrepareFunctionsBuildTask;
 use HagenbergJams\JamEngine\Actions\PrepareRegistrationBuildTask;
@@ -25,6 +24,7 @@ use HagenbergJams\JamEngine\Commands\SyncR2Command;
 use HagenbergJams\JamEngine\Commands\TopicReleaseCommand;
 use HagenbergJams\JamEngine\Commands\UpdateChecksumsCommand;
 use HagenbergJams\JamEngine\Commands\ValidateCommand;
+use Hyde\Foundation\HydeKernel;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -44,7 +44,6 @@ class JamEngineServiceProvider extends ServiceProvider
             CopyGamesBuildTask::class,
             CopyHtaccessBuildTask::class,
             CopyRobotsTxtBuildTask::class,
-            GeneratePagesBuildTask::class,
             PrepareFunctionsBuildTask::class,
             PrepareRegistrationBuildTask::class,
         ];
@@ -53,6 +52,9 @@ class JamEngineServiceProvider extends ServiceProvider
         $siteTasks = (array) config('hyde.build_tasks', []);
 
         config(['hyde.build_tasks' => array_merge($engineTasks, $siteTasks)]);
+
+        // Pages come from Hyde's discovery, not from a build task, so that `php hyde serve` has them too.
+        $this->app->make(HydeKernel::class)->registerExtension(JamPagesExtension::class);
     }
 
     public function boot(): void

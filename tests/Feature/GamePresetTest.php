@@ -67,6 +67,25 @@ it('lets a site replace a static page', function (): void {
     expect(page($site, 'imprint.html'))->toContain('OWN IMPRINT');
 });
 
+it('lets a site replace a static page with a Markdown page', function (): void {
+    $site = buildSite('game', prepare: function (string $site): void {
+        file_put_contents("{$site}/_pages/imprint.md", 'OWN MARKDOWN IMPRINT');
+    });
+
+    expect(page($site, 'imprint.html'))->toContain('OWN MARKDOWN IMPRINT');
+});
+
+it('knows the generated pages without a build, so that the dev server serves them', function (): void {
+    $process = runHyde(fixtureCopy('game'), 'route:list --no-ansi');
+    $routes = $process->getOutput();
+
+    expect($process->getExitCode())->toBe(0, $routes . $process->getErrorOutput());
+
+    foreach (['index', '2025', '2024', '2025/space-game', 'people', 'person/ann-example', 'rules', 'imprint', '404'] as $route) {
+        expect($routes)->toMatch('/\|\s' . preg_quote($route, '/') . '\s+\|/');
+    }
+});
+
 it('migrates legacy data', function (): void {
     $site = fixtureCopy('game');
     (new Symfony\Component\Filesystem\Filesystem())->remove("{$site}/_data/projects");

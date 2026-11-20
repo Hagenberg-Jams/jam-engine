@@ -13,7 +13,7 @@ Reusable [HydePHP](https://hydephp.com) engine for the websites of the Hagenberg
 }
 ```
 
-The service provider is discovered automatically. It registers the views, build tasks and console commands.
+The service provider is discovered automatically. It registers the views, build tasks and console commands, and adds the pages generated from `_data/` (home, imprint, 404, rules, years, projects, people, registration) to Hyde's page discovery, so `php hyde serve` and `php hyde build` both have them. A site replaces one of the static pages (`index`, `imprint`, `404`, `rules`) with a page of the same name in its `_pages/`.
 
 ## Overriding views
 

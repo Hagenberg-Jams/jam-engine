@@ -2,19 +2,17 @@
 
 declare(strict_types=1);
 
-namespace HagenbergJams\JamEngine\Actions;
+namespace HagenbergJams\JamEngine;
 
 use function array_filter;
 use function array_map;
 use function glob;
 
-use HagenbergJams\JamEngine\JamData;
-use HagenbergJams\JamEngine\Registration;
-use Hyde\Framework\Features\BuildTasks\PreBuildTask;
-use Hyde\Hyde;
+use Hyde\Foundation\Concerns\HydeExtension;
+use Hyde\Foundation\Kernel\PageCollection;
 use Hyde\Pages\BladePage;
+use Hyde\Pages\Concerns\HydePage;
 use Hyde\Pages\InMemoryPage;
-use Hyde\Support\Models\Route;
 use Illuminate\Support\Str;
 
 use function is_array;
@@ -23,26 +21,31 @@ use function preg_match;
 use function sort;
 
 /**
- * Pre-build task to generate the jam year pages and project detail pages from data files.
+ * Adds the pages that the engine generates from the data files to Hyde's page discovery.
  *
- * This makes `php hyde build` behave like the old Jekyll generator:
- * - For every `_data/jams/{year}.yaml`, register an InMemoryPage with identifier `{year}`
- * - For every project in `_data/projects/{year}.yaml`, register an InMemoryPage with identifier `{year}/{slug}`
+ * Hyde runs this whenever its kernel boots, so the pages exist for `php hyde build`,
+ * for `php hyde serve` and for every other command:
+ * - the home, rules, imprint and 404 pages, and the registration pages
+ * - for every `_data/jams/{year}.yaml`, a page with the identifier `{year}`
+ * - for every project in `_data/projects/{year}.yaml`, a page with the identifier `{year}/{slug}`
+ * - the people pages, if the feature is on
+ *
+ * Hyde creates the routes from the pages afterwards.
  */
-class GeneratePagesBuildTask extends PreBuildTask
+class JamPagesExtension extends HydeExtension
 {
-    protected static string $message = 'Generating jam pages from data files';
+    /** @var PageCollection<HydePage> */
+    protected PageCollection $pages;
 
-    public function handle(): void
+    /** @param PageCollection<HydePage> $collection */
+    public function discoverPages(PageCollection $collection): void
     {
+        $this->pages = $collection;
+
         $this->registerStaticPages();
         $this->registerRegistrationPages();
 
         $years = $this->discoverYears();
-
-        if ($years === []) {
-            $this->skip('No jam data found in _data/jams');
-        }
 
         foreach ($years as $year) {
             $this->registerYearPage($year);
@@ -56,8 +59,13 @@ class GeneratePagesBuildTask extends PreBuildTask
         }
     }
 
+    protected function addPage(HydePage $page): void
+    {
+        $this->pages->addPage($page);
+    }
+
     /**
-     * Registers the home, rules, imprint and 404 pages. A site can replace one with a file in _pages/.
+     * Registers the home, rules, imprint and 404 pages. A site can replace one with a page of the same name in _pages/.
      *
      * These are real Blade pages, so the sitemap treats them like pages from _pages/.
      */
@@ -70,14 +78,11 @@ class GeneratePagesBuildTask extends PreBuildTask
         }
 
         foreach ($pages as $identifier) {
-            if (file_exists(base_path("_pages/{$identifier}.blade.php"))) {
-                continue;
+            $replaced = $this->pages->contains(fn(HydePage $page): bool => $page->getRouteKey() === $identifier);
+
+            if (!$replaced) {
+                $this->addPage(new BladePage($identifier));
             }
-
-            $page = new BladePage($identifier);
-
-            Hyde::pages()->addPage($page);
-            Hyde::routes()->addRoute(new Route($page));
         }
     }
 
@@ -98,10 +103,7 @@ class GeneratePagesBuildTask extends PreBuildTask
         ];
 
         foreach ($pages as $identifier => $page) {
-            $memoryPage = InMemoryPage::make($identifier, ['year' => $year, 'mode' => $page['mode']], '', $page['view']);
-
-            Hyde::pages()->addPage($memoryPage);
-            Hyde::routes()->addRoute(new Route($memoryPage));
+            $this->addPage(InMemoryPage::make($identifier, ['year' => $year, 'mode' => $page['mode']], '', $page['view']));
         }
     }
 
@@ -132,8 +134,7 @@ class GeneratePagesBuildTask extends PreBuildTask
             'projects' => JamData::getProjects($year),
         ], '', 'pages.year');
 
-        Hyde::pages()->addPage($page);
-        Hyde::routes()->addRoute(new Route($page));
+        $this->addPage($page);
     }
 
     protected function registerGamePages(int $year): void
@@ -172,8 +173,7 @@ class GeneratePagesBuildTask extends PreBuildTask
                 'projects' => $projects, // pass full list; view will pick by slug
             ], '', 'pages.project');
 
-            Hyde::pages()->addPage($page);
-            Hyde::routes()->addRoute(new Route($page));
+            $this->addPage($page);
         }
     }
 
@@ -246,8 +246,7 @@ class GeneratePagesBuildTask extends PreBuildTask
             'persons' => $persons,
         ], '', 'pages.people');
 
-        Hyde::pages()->addPage($page);
-        Hyde::routes()->addRoute(new Route($page));
+        $this->addPage($page);
     }
 
     /**
@@ -334,8 +333,7 @@ class GeneratePagesBuildTask extends PreBuildTask
                 'years' => array_unique(array_column($projects, 'year')),
             ], '', 'pages.person');
 
-            Hyde::pages()->addPage($page);
-            Hyde::routes()->addRoute(new Route($page));
+            $this->addPage($page);
         }
     }
 
