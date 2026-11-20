@@ -56,6 +56,25 @@ class Submission
         return config('jam.submission.kind') === 'video' ? 'video' : 'game';
     }
 
+    /**
+     * The Cloudflare Access application of the admin page: the one of the upload, or else the one of the registration form.
+     *
+     * @return array{team: string, aud: string}
+     */
+    public static function access(): array
+    {
+        foreach (['jam.submission.access', 'jam.registration.form.access'] as $key) {
+            $access = (array) config($key, []);
+            $team = self::string($access['team'] ?? '');
+            $aud = self::string($access['aud'] ?? '');
+            if ($team !== '' && $aud !== '') {
+                return ['team' => $team, 'aud' => $aud];
+            }
+        }
+
+        return ['team' => '', 'aud' => ''];
+    }
+
     public static function turnstileSiteKey(): string
     {
         return self::string(config('jam.submission.turnstile_site_key')) ?: self::string(config('jam.registration.form.turnstile_site_key'));

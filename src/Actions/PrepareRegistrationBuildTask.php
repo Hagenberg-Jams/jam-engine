@@ -34,7 +34,8 @@ class PrepareRegistrationBuildTask extends PostBuildTask
 
         if (!Registration::enabled()) {
             // Remove the files of an earlier build, so a disabled form cannot be reached.
-            foreach ([...array_diff(self::FILES, ['_shared.js']), '_registration-config.json'] as $file) {
+            // The upload page, which runs after this task, brings back the admin files it shares.
+            foreach ([...array_diff(self::FILES, ['_shared.js']), '_registration-config.json', '_access-config.json'] as $file) {
                 if (is_file("{$target}/{$file}")) {
                     unlink("{$target}/{$file}");
                 }
@@ -54,6 +55,9 @@ class PrepareRegistrationBuildTask extends PostBuildTask
 
             copy("{$source}/{$file}", "{$target}/{$file}");
         }
+
+        // Read by the middleware of all admin functions.
+        file_put_contents("{$target}/_access-config.json", json_encode(Registration::functionConfig()['access'], JSON_PRETTY_PRINT) . "\n");
 
         file_put_contents(
             "{$target}/_registration-config.json",

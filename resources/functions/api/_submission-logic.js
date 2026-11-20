@@ -493,6 +493,91 @@ export async function handleAbort(request, env, deps) {
     return json(200, { aborted: true });
 }
 
+// Handlers for the admin API. The middleware has checked the Access token before.
+
+/**
+ * Every team with its uploads, README and screenshots, also teams that uploaded nothing yet,
+ * and folders of teams that are no longer in the list.
+ */
+export async function handleAdminList(env, config) {
+    if (!env.JAM_SUBMISSIONS) {
+        return json(503, { error: 'not_configured' });
+    }
+
+    const bucket = env.JAM_SUBMISSIONS;
+    const objects = await listAll(bucket, `${config.year}/`);
+    const known = await teams(env, config);
+    const bySlug = new Map(known.map((team) => [team.slug, { name: team.name, slug: team.slug, listed: true }]));
+
+    for (const object of objects) {
+        const slug = object.key.split('/')[1];
+        if (slug && !bySlug.has(slug)) {
+            bySlug.set(slug, { name: object.customMetadata?.team ?? slug, slug, listed: false });
+        }
+    }
+
+    const result = [];
+    for (const team of bySlug.values()) {
+        const base = `${config.year}/${team.slug}/`;
+        const own = objects.filter((object) => object.key.startsWith(base));
+        const state = own.length > 0 ? await teamState(env, config, team) : { uploads: [], latest: {}, readme: null };
+        const current = own.some((object) => object.key === `${base}screenshots/current.json`)
+            ? await (await bucket.get(`${base}screenshots/current.json`)).json()
+            : null;
+        const uploads = state.uploads.map((upload) => ({
+            ...upload,
+            key: `${base}uploads/${upload.file}`,
+            latest: state.latest[upload.platform] === upload.version,
+        }));
+
+        result.push({
+            ...team,
+            uploads,
+            latest: state.latest,
+            onTime: uploads.some((upload) => !upload.late),
+            readme: state.readme ? { key: `${base}README.md`, title: state.readme.title, text: state.readme.text } : null,
+            readmes: own.filter((object) => object.key.startsWith(`${base}readme/`)).length,
+            screenshots: (current?.files ?? []).map((file) => `${base}screenshots/${file}`),
+        });
+    }
+
+    result.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+
+    return json(200, { year: config.year, kind: config.kind, deadline: config.deadline, teams: result });
+}
+
+const INLINE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'text/markdown; charset=utf-8'];
+
+/**
+ * Sends one file of the bucket. Only images and the README may be shown in the page, everything else is a download.
+ */
+export async function handleAdminFile(url, env, config) {
+    const key = url.searchParams.get('key') ?? '';
+    if (!env.JAM_SUBMISSIONS || !key.startsWith(`${config.year}/`) || key.includes('..') || key.endsWith('/')) {
+        return json(400, { error: 'key' });
+    }
+
+    const object = await env.JAM_SUBMISSIONS.get(key);
+    if (!object) {
+        return json(404, { error: 'not_found' });
+    }
+
+    const type = object.httpMetadata?.contentType ?? 'application/octet-stream';
+    const inline = url.searchParams.get('inline') === '1' && INLINE_TYPES.includes(type);
+    const name = key.split('/').pop().replace(/["\\\r\n]/g, '_');
+
+    return new Response(object.body, {
+        headers: {
+            'content-type': inline && type.startsWith('text/') ? 'text/plain; charset=utf-8' : type,
+            'content-length': String(object.size),
+            'content-disposition': `${inline ? 'inline' : 'attachment'}; filename="${name}"`,
+            'cache-control': 'private, no-store',
+            'x-content-type-options': 'nosniff',
+            'content-security-policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
+        },
+    });
+}
+
 export function organiserMail(session, file, config) {
     const what = config.kind === 'game' ? `${session.platform} ${session.version}` : session.version;
     const extras = [session.readme ? 'a new README.md' : '', session.screenshots.length > 0 ? `${session.screenshots.length} screenshots` : '']

@@ -47,6 +47,7 @@ class JamPagesExtension extends HydeExtension
 
         if (Submission::enabled()) {
             $this->addPage(InMemoryPage::make('submit', ['year' => Submission::year()], '', 'pages.submit'));
+            $this->addPage(InMemoryPage::make('admin/submissions', ['year' => Submission::year()], '', 'pages.admin-submissions'));
         }
 
         $years = $this->discoverYears();

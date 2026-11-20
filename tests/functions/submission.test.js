@@ -4,6 +4,8 @@ import {
     checkReadme,
     fileName,
     handleAbort,
+    handleAdminFile,
+    handleAdminList,
     handleCheck,
     handleComplete,
     handlePart,
@@ -320,5 +322,50 @@ describe('uploads', () => {
         const result = await upload(env(), fakeDeps(), videoConfig, { version: '1.0.0', extension: 'mp4', platform: 'Win', readme, screenshots: screenshots(1) });
 
         expect(result.body.file).toBe('TheAwesomes_NightShift_1.0.0.mp4');
+    });
+});
+
+describe('admin', () => {
+    it('lists every team with its uploads, README and screenshots, also teams without upload and unknown folders', async () => {
+        const e = env();
+        await upload(e, fakeDeps(), gameConfig, { version: '1.0.0', readme: README, screenshots: screenshots(4) });
+        await upload(e, fakeDeps({ now: LATE }), gameConfig, { version: '1.0.1' }, 'fixed');
+        await e.JAM_SUBMISSIONS.put('2026/old-team/uploads/Old_Game_Win_1.0.0.zip', 'x', { customMetadata: { team: 'Old Team', platform: 'Win', version: '1.0.0', late: 'yes' } });
+        await e.JAM_SUBMISSIONS.put('2025/the-awesomes/uploads/Last_Year_Win_1.0.0.zip', 'x', { customMetadata: { platform: 'Win', version: '1.0.0' } });
+
+        const body = await (await handleAdminList(e, gameConfig)).json();
+        const [old, pirates, awesomes] = body.teams;
+
+        expect(body.teams.map((team) => team.slug)).toEqual(['old-team', 'pixel-pirates', 'the-awesomes']);
+        expect(old).toMatchObject({ name: 'Old Team', listed: false, onTime: false });
+        expect(pirates).toMatchObject({ listed: true, uploads: [], readme: null, screenshots: [] });
+        expect(awesomes).toMatchObject({ latest: { Win: '1.0.1' }, onTime: true, readmes: 1 });
+        expect(awesomes.uploads.map((upload) => [upload.version, upload.latest, upload.late])).toEqual([['1.0.1', true, true], ['1.0.0', false, false]]);
+        expect(awesomes.uploads[0].key).toBe('2026/the-awesomes/uploads/TheAwesomes_MostAwesomeGame_Win_1.0.1.zip');
+        expect(awesomes.readme).toMatchObject({ key: '2026/the-awesomes/README.md', title: 'Most Awesome Game', text: README });
+        expect(awesomes.screenshots).toHaveLength(4);
+        expect(awesomes.screenshots[0]).toMatch(/^2026\/the-awesomes\/screenshots\/.+\/1\.png$/);
+    });
+
+    it('sends files as downloads, shows only images and the README in the page, and stays in the year', async () => {
+        const e = env();
+        await e.JAM_SUBMISSIONS.put('2026/a/uploads/A_Game_Win_1.0.0.zip', 'zip', { httpMetadata: { contentType: 'application/zip' } });
+        await e.JAM_SUBMISSIONS.put('2026/a/screenshots/s/1.png', 'png', { httpMetadata: { contentType: 'image/png' } });
+        await e.JAM_SUBMISSIONS.put('2026/a/README.md', '# A', { httpMetadata: { contentType: 'text/markdown; charset=utf-8' } });
+        await e.JAM_SUBMISSIONS.put('2025/a/README.md', '# Old');
+        const get = (query) => handleAdminFile(new URL(`https://jam.example/api/admin/submissions/file?${query}`), e, gameConfig);
+
+        const zip = await get('key=2026/a/uploads/A_Game_Win_1.0.0.zip&inline=1');
+        expect(zip.headers.get('content-disposition')).toBe('attachment; filename="A_Game_Win_1.0.0.zip"');
+        expect(await zip.text()).toBe('zip');
+
+        expect((await get('key=2026/a/screenshots/s/1.png&inline=1')).headers.get('content-disposition')).toBe('inline; filename="1.png"');
+        const readme = await get('key=2026/a/README.md&inline=1');
+        expect(readme.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+        expect(readme.headers.get('content-security-policy')).toContain('sandbox');
+
+        expect((await get('key=2025/a/README.md')).status).toBe(400);
+        expect((await get('key=2026/../2025/a/README.md')).status).toBe(400);
+        expect((await get('key=2026/a/missing.zip')).status).toBe(404);
     });
 });

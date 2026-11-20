@@ -18,8 +18,18 @@ function withSubmission(array $settings = [], ?string $teams = null): callable
 }
 
 it('builds the upload page and the functions for videos, with the teams of the site', function (): void {
-    $site = buildSite('animation', prepare: withSubmission(teams: "- The Awesomes\n- name: 'Pixel Pirates'\n- The Awesomes\n"));
+    $site = buildSite('animation', prepare: withSubmission(['access' => ['team' => 'jams', 'aud' => 'submit-aud']], "- The Awesomes\n- name: 'Pixel Pirates'\n- The Awesomes\n"));
     $page = page($site, 'submit.html');
+
+    // The admin page works without the registration form, with the Access application of the upload.
+    expect(page($site, 'admin/submissions.html'))->toContain('Submissions 2026')->toContain('noindex')
+        ->and(file_exists("{$site}/functions/api/admin/submissions/index.js"))->toBeTrue()
+        ->and(file_exists("{$site}/functions/api/admin/submissions/file.js"))->toBeTrue()
+        ->and(file_exists("{$site}/functions/api/admin/_middleware.js"))->toBeTrue()
+        ->and(file_exists("{$site}/functions/api/_access.js"))->toBeTrue()
+        ->and(file_exists("{$site}/functions/api/admin/registrations.js"))->toBeFalse()
+        ->and(json_decode((string) file_get_contents("{$site}/functions/api/_access-config.json"), true))->toBe(['team' => 'jams', 'aud' => 'submit-aud'])
+        ->and(file_get_contents("{$site}/_site/sitemap.xml"))->not->toContain('admin/submissions');
     $config = json_decode((string) file_get_contents("{$site}/functions/api/_submission-config.json"), true);
 
     expect($page)->toContain('Submit your Animation')
@@ -86,7 +96,11 @@ it('offers a ZIP for each platform for games, and takes the teams from the regis
         ->and($config['closes'])->toBe('2026-01-31T23:59:00+01:00')
         // Both functions need the shared helpers, and the registration keeps working next to the upload.
         ->and(file_exists("{$site}/functions/api/registration/index.js"))->toBeTrue()
-        ->and(file_exists("{$site}/functions/api/submission/index.js"))->toBeTrue();
+        ->and(file_exists("{$site}/functions/api/submission/index.js"))->toBeTrue()
+        // Without its own Access application, the upload uses the one of the registration form, and both admin pages work.
+        ->and(json_decode((string) file_get_contents("{$site}/functions/api/_access-config.json"), true))->toBe(['team' => 'jams', 'aud' => 'aud-tag'])
+        ->and(file_exists("{$site}/functions/api/admin/registrations.js"))->toBeTrue()
+        ->and(file_exists("{$site}/functions/api/admin/submissions/index.js"))->toBeTrue();
 });
 
 it('builds nothing of it while the upload is off', function (): void {
@@ -94,5 +108,8 @@ it('builds nothing of it while the upload is off', function (): void {
 
     expect(file_exists("{$site}/_site/submit.html"))->toBeFalse()
         ->and(file_exists("{$site}/functions/api/_submission-config.json"))->toBeFalse()
-        ->and(file_exists("{$site}/functions/api/submission/start.js"))->toBeFalse();
+        ->and(file_exists("{$site}/functions/api/submission/start.js"))->toBeFalse()
+        ->and(file_exists("{$site}/_site/admin/submissions.html"))->toBeFalse()
+        ->and(file_exists("{$site}/functions/api/admin/_middleware.js"))->toBeFalse()
+        ->and(file_exists("{$site}/functions/api/_access-config.json"))->toBeFalse();
 });

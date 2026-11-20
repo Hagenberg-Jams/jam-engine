@@ -28,6 +28,7 @@ export function createR2() {
         customMetadata: entry.customMetadata,
         httpMetadata: entry.httpMetadata,
         uploaded: entry.uploaded,
+        body: new Response(entry.bytes).body,
         text: async () => new TextDecoder().decode(entry.bytes),
         json: async () => JSON.parse(new TextDecoder().decode(entry.bytes)),
         arrayBuffer: async () => entry.bytes.buffer,

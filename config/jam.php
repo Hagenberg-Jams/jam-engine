@@ -119,6 +119,11 @@ return [
         'turnstile_site_key' => '',
         'notify' => [],
         'from' => '',
+        // Cloudflare Access for /admin/submissions, like the admin page of the registration form.
+        'access' => [
+            'team' => '',
+            'aud' => '',
+        ],
         'texts' => [
             'intro' => '',
         ],
