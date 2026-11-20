@@ -90,25 +90,31 @@ class Submission
     }
 
     /**
-     * The template the page offers for download. `{team}` is replaced by the team on the page.
+     * The README.md template, laid out like the READMEs of earlier jams: the title, then one section per heading.
+     * Hints are HTML comments, so they do not count as content. `{team}` is replaced by the team, or else left empty.
      */
-    public static function readmeTemplate(): string
+    public static function readmeTemplate(?string $team = null): string
     {
         $readme = (array) config('jam.submission.readme', []);
-        $lines = ['# ' . self::string($readme['title'] ?? 'Project name')];
-        if (self::string($readme['title_hint'] ?? '') !== '') {
-            $lines[] = '<!-- ' . self::string($readme['title_hint']) . ' -->';
-        }
+        $hint = self::string($readme['title_hint'] ?? '');
+        $lines = [
+            '# ' . self::string($readme['title'] ?? 'Project name'),
+            '',
+            '<!-- ' . ($hint !== '' ? "{$hint} " : '') . 'Fill in every section in English, keep the headings, and save the file as UTF-8. -->',
+        ];
 
         foreach (self::sections() as $section) {
             $lines[] = '';
             $lines[] = '## ' . $section['heading'];
+            $lines[] = '';
             if ($section['hint'] !== '') {
                 $lines[] = '<!-- ' . $section['hint'] . ' -->';
             }
-            if ($section['heading'] === 'Team') {
-                $lines[] = '{team}';
-            } elseif (str_contains(strtolower($section['heading']), 'member')) {
+            if (strtolower($section['heading']) === 'team') {
+                if (($team ?? '{team}') !== '') {
+                    $lines[] = $team ?? '{team}';
+                }
+            } elseif ($section['list']) {
                 $lines[] = '- ';
             }
         }
@@ -117,7 +123,7 @@ class Submission
     }
 
     /**
-     * @return array<int, array{heading: string, aliases: array<int, string>, required: bool, hint: string}>
+     * @return array<int, array{heading: string, aliases: array<int, string>, required: bool, hint: string, list: bool}>
      */
     public static function sections(): array
     {
@@ -128,6 +134,8 @@ class Submission
             'aliases' => array_values(array_map(fn(mixed $alias): string => self::string($alias), (array) (is_array($section) ? ($section['aliases'] ?? []) : []))),
             'required' => !is_array($section) || (bool) ($section['required'] ?? true),
             'hint' => self::string(is_array($section) ? ($section['hint'] ?? '') : ''),
+            // The template starts the section with an empty list item.
+            'list' => is_array($section) && (bool) ($section['list'] ?? false),
         ], $sections));
     }
 

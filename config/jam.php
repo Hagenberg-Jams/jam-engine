@@ -111,7 +111,7 @@ return [
             'title_hint' => 'Replace "Project name" with the name of your project.',
             'sections' => [
                 ['heading' => 'Team', 'required' => true, 'hint' => 'Your team name.'],
-                ['heading' => 'Team members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.'],
+                ['heading' => 'Team Members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.', 'list' => true],
                 ['heading' => 'Description', 'required' => true, 'hint' => 'A short description in English.'],
             ],
         ],

@@ -55,9 +55,10 @@ return [
             'title_hint' => 'Replace "Game name" with the name of your game.',
             'sections' => [
                 ['heading' => 'Team', 'required' => true, 'hint' => 'Your team name.'],
-                ['heading' => 'Team members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.'],
+                ['heading' => 'Team Members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.', 'list' => true],
                 ['heading' => 'Description', 'required' => true, 'hint' => 'In English: what is the setting or story, and what must the player do to win?'],
-                ['heading' => 'How to play', 'aliases' => ['Controls'], 'required' => true, 'hint' => 'The controls, or how to play.'],
+                ['heading' => 'Controls', 'required' => true, 'hint' => 'One control per line, for example: - **Movement:** WASD', 'list' => true],
+                ['heading' => 'How to Play', 'required' => false, 'hint' => 'Optional: anything else players need to know, for example how to start the game or play it in the browser. Delete this section if you do not need it.'],
             ],
         ],
     ],

@@ -60,7 +60,7 @@
                 @else
                     <li><strong>Your animation as a video file</strong> ({{ strtoupper(implode(', ', $function['extensions'])) }}), in the best quality you have.</li>
                 @endif
-                <li><strong>README.md</strong> with the {{ $project }}, your team, its members and a short description in English. Download the template once you have chosen your team below.</li>
+                <li><strong>README.md</strong> with the name of your {{ $project }}, your team, its members and a short description in English@if($game), and the controls@endif. Start from our template and fill in every section: <a href="/submit/README.md" download="README.md" class="font-semibold underline text-primary-700 dark:text-primary-300">Download the README template</a></li>
                 @if($shots['min'] > 0)
                     <li><strong>{{ $shots['min'] }} {{ $game ? 'screenshots' : 'stills' }}</strong>@if($shots['width'] > 0) of at least {{ $shots['width'] }}×{{ $shots['height'] }} pixels @endif (PNG, JPG or WebP).@if($game) One should show the start screen, the others different phases of the game.@endif</li>
                 @endif
@@ -119,7 +119,7 @@
             <div>
                 <label for="readme" class="{{ $label }}">README.md <span id="readme-optional" class="hidden font-normal">(optional, replaces the one you uploaded before)</span></label>
                 <input id="readme" type="file" accept=".md,text/markdown,text/plain" class="{{ $input }}">
-                <p class="{{ $hint }}"><button type="button" id="template" class="underline text-primary-700 dark:text-primary-300">Download the README template</button> and fill in every section.</p>
+                <p class="{{ $hint }}"><button type="button" id="template" class="underline text-primary-700 dark:text-primary-300">Download the template with your team filled in</button>, and fill in every section.</p>
                 <ul id="readme-problems" class="hidden mt-2 list-disc pl-6 text-red-700 dark:text-red-400"></ul>
             </div>
 

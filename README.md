@@ -138,7 +138,7 @@ To run the functions locally, use a short storage path on Windows, for example `
 With `submission.enabled`, a site gets a page at `/submit`, where teams upload their project at the end of the jam. Teams choose their team, enter the upload code from the announcement and upload:
 
 - **Games:** one ZIP file for each platform. **Animations:** one video file. The preset sets which.
-- **README.md:** the page offers a template with the team filled in. The function checks that the title is replaced and every required section has text. HTML comments in the template are hints and do not count.
+- **README.md:** the template is at `/submit/README.md`, to link in an announcement, and once a team is chosen also with the team filled in. It follows the READMEs of earlier jams: the title as the first heading, then `Team`, `Team Members`, `Description` and, for games, `Controls` and an optional `How to Play`. The function checks that the title is replaced and every required section has text. HTML comments in the template are hints and do not count.
 - **Screenshots:** a number of images, checked for their size in the browser.
 
 README and screenshots are needed with the first upload of a team. Later uploads, for example a bugfix, may leave them out. The page suggests the next version (1.0.0, then 1.0.1, …) and builds the file name, for example `TheAwesomes_MostAwesomeGame_Win_1.0.0.zip`. A version must be higher than the last one of the same platform, so nothing is ever overwritten. Uploads after the deadline are marked as late, and organisers get a mail for each upload.

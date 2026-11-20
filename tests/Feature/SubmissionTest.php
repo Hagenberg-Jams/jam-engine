@@ -28,6 +28,8 @@ it('builds the upload page and the functions for videos, with the teams of the s
         ->toContain('accept=".mp4,.mov"')
         ->toContain('Your animation as a video file')
         ->toContain('# Animation title')
+        ->and(page($site, 'submit/README.md'))->toContain("## Team Members\n\n<!-- One person per line")->toContain('## Credits')->not->toContain('{team}')
+        ->and($page)
         ->not->toContain('id="platform"')
         ->and(file_exists("{$site}/functions/api/submission/start.js"))->toBeTrue()
         ->and(file_exists("{$site}/functions/api/_shared.js"))->toBeTrue()
@@ -50,7 +52,36 @@ it('offers a ZIP for each platform for games, and takes the teams from the regis
     $site = buildSite('game', prepare: withSubmission(['deadline' => '2025-12-14T21:00:00+01:00', 'closes' => '2026-01-31T23:59:00+01:00']));
     $config = json_decode((string) file_get_contents("{$site}/functions/api/_submission-config.json"), true);
 
-    expect(page($site, 'submit.html'))->toContain('id="platform"')->toContain('<option value="Linux">')->toContain('# Game name')->toContain('## How to play')
+    // The template follows the READMEs of the Game Jam 2025: title, Team, Team Members, Description, Controls, How to Play.
+    expect(page($site, 'submit/README.md'))->toBe(implode("\n", [
+        '# Game name',
+        '',
+        '<!-- Replace "Game name" with the name of your game. Fill in every section in English, keep the headings, and save the file as UTF-8. -->',
+        '',
+        '## Team',
+        '',
+        '<!-- Your team name. -->',
+        '',
+        '## Team Members',
+        '',
+        '<!-- One person per line, with the name that should appear on the website. -->',
+        '- ',
+        '',
+        '## Description',
+        '',
+        '<!-- In English: what is the setting or story, and what must the player do to win? -->',
+        '',
+        '## Controls',
+        '',
+        '<!-- One control per line, for example: - **Movement:** WASD -->',
+        '- ',
+        '',
+        '## How to Play',
+        '',
+        '<!-- Optional: anything else players need to know, for example how to start the game or play it in the browser. Delete this section if you do not need it. -->',
+        '',
+    ]))
+        ->and(page($site, 'submit.html'))->toContain('id="platform"')->toContain('<option value="Linux">')->toContain('href="/submit/README.md" download="README.md"')
         ->and($config)->toMatchArray(['year' => 2025, 'kind' => 'game', 'platforms' => ['Win', 'Mac', 'Linux', 'Web'], 'extensions' => ['zip'], 'teams' => []])
         ->and($config['closes'])->toBe('2026-01-31T23:59:00+01:00')
         // Both functions need the shared helpers, and the registration keeps working next to the upload.

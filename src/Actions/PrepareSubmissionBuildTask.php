@@ -63,6 +63,12 @@ class PrepareSubmissionBuildTask extends PostBuildTask
             json_encode(Submission::functionConfig(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
         );
 
+        // The README template as a file of its own, so that it can be linked, for example in an announcement.
+        if (!is_dir(base_path('_site/submit'))) {
+            mkdir(base_path('_site/submit'), 0755, true);
+        }
+        file_put_contents(base_path('_site/submit/README.md'), Submission::readmeTemplate(''));
+
         $sitemap = base_path('_site/sitemap.xml');
         $content = is_file($sitemap) ? file_get_contents($sitemap) : false;
         if ($content !== false) {

@@ -37,10 +37,10 @@ const gameConfig = {
         title: 'Game name',
         sections: [
             { heading: 'Team', required: true },
-            { heading: 'Team members', aliases: ['Members'], required: true },
+            { heading: 'Team Members', aliases: ['Members'], required: true },
             { heading: 'Description', required: true },
-            { heading: 'How to play', aliases: ['Controls'], required: true },
-            { heading: 'Credits', required: false },
+            { heading: 'Controls', required: true },
+            { heading: 'How to Play', required: false },
         ],
     },
     teams: [{ name: 'The Awesomes', slug: 'the-awesomes' }, { name: 'Pixel Pirates', slug: 'pixel-pirates' }],
@@ -58,40 +58,58 @@ const videoConfig = {
     readme: { ...gameConfig.readme, title: 'Animation title' },
 };
 
+// Laid out like the READMEs of the Game Jam 2025.
 const README = `# Most Awesome Game
 
 ## Team
+
 The Awesomes
 
-## Team members
+## Team Members
+
 - Ann Example
 - Bo Tester
 
 ## Description
+
 <!-- What is the setting, what must the player do to win? -->
 You are a cat in space. Collect all fish to win.
 
-## How to play
-WASD to move, Space to jump.
+## Controls
 
-## Credits
+- **Movement:** WASD
+- **Jump:** Space
+
+## How to Play
+
+Run \`npm install\` and \`npm run dev\`, or play it online.
 `;
 
 const TEMPLATE = `# Game name
-<!-- Replace "Game name" with the name of your game. -->
+
+<!-- Replace "Game name" with the name of your game. Fill in every section in English, keep the headings, and save the file as UTF-8. -->
 
 ## Team
+
 The Awesomes
 
-## Team members
-<!-- One person per line. -->
+## Team Members
+
+<!-- One person per line, with the name that should appear on the website. -->
 -
 
 ## Description
-<!-- What is the setting, what must the player do to win? -->
 
-## How to play
-<!-- Controls, or how to play. -->
+<!-- In English: what is the setting or story, and what must the player do to win? -->
+
+## Controls
+
+<!-- One control per line, for example: - **Movement:** WASD -->
+-
+
+## How to Play
+
+<!-- Optional: anything else players need to know. Delete this section if you do not need it. -->
 `;
 
 const env = () => ({ JAM_SUBMISSIONS: createR2(), JAM_SUBMISSION_CODE: 'Pixel-2026', TURNSTILE_SECRET: 'secret', EMAIL_API_TOKEN: 'mail', CF_ACCOUNT_ID: 'account' });
@@ -170,9 +188,9 @@ describe('README check', () => {
 
         expect(errors).toEqual([
             { code: 'title', section: 'Game name' },
-            { code: 'empty', section: 'Team members' },
+            { code: 'empty', section: 'Team Members' },
             { code: 'empty', section: 'Description' },
-            { code: 'empty', section: 'How to play' },
+            { code: 'empty', section: 'Controls' },
         ]);
     });
 
