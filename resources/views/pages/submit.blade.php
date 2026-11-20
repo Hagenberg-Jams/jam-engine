@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (error.code === 'title') { return 'README.md: please replace the first heading "' + error.section + '" with your title.'; }
         if (error.code === 'missing') { return 'README.md: the section "' + error.section + '" is missing.'; }
         if (error.code === 'empty') { return 'README.md: please fill in the section "' + error.section + '".'; }
-        if (error.code === 'version_low') { return 'The version must be higher than ' + error.latest + ', your last upload for this platform.'; }
+        if (error.code === 'version_low') { return 'The version must be higher than ' + error.latest + ', your last upload' + (page.kind === 'game' ? ' for this platform' : '') + '.'; }
 
         return texts[error.code] || texts[error] || 'Something went wrong (' + (error.code || error) + '). Please try again.';
     }
