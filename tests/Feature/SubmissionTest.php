@@ -92,7 +92,7 @@ it('offers a ZIP for each platform for games, and takes the teams from the regis
         '',
     ]))
         ->and(page($site, 'submit.html'))->toContain('id="platform"')->toContain('<option value="Linux">')->toContain('href="/submit/README.md" download="README.md"')
-        ->and($config)->toMatchArray(['year' => 2025, 'kind' => 'game', 'platforms' => ['Win', 'Mac', 'Linux', 'Web'], 'extensions' => ['zip'], 'teams' => []])
+        ->and($config)->toMatchArray(['year' => 2025, 'kind' => 'game', 'platforms' => ['Win', 'Mac', 'Linux', 'Web'], 'extensions' => ['zip'], 'teams' => null])
         ->and($config['closes'])->toBe('2026-01-31T23:59:00+01:00')
         // Both functions need the shared helpers, and the registration keeps working next to the upload.
         ->and(file_exists("{$site}/functions/api/registration/index.js"))->toBeTrue()

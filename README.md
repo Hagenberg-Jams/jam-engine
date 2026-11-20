@@ -9,7 +9,7 @@ Reusable [HydePHP](https://hydephp.com) engine for the websites of the Hagenberg
 ```json
 {
     "repositories": [{ "type": "vcs", "url": "https://github.com/Hagenberg-Jams/jam-engine" }],
-    "require": { "hagenberg-jams/jam-engine": "^0.2" }
+    "require": { "hagenberg-jams/jam-engine": "^0.4" }
 }
 ```
 
@@ -155,7 +155,7 @@ README and screenshots are needed with the first upload of a team. Later uploads
 ],
 ```
 
-- **Teams:** `_data/teams/YYYY.yaml` with a list of team names, for example `- The Awesomes`. Without the file, the page offers the confirmed registrations of the registration form.
+- **Teams:** `_data/teams/YYYY.yaml` with a list of team names, for example `- The Awesomes`. A file without names offers no team yet. Without the file, the page offers the confirmed registrations of the registration form. Do not rename a team after its first upload: its folder in the bucket follows the name.
 - **Storage:** the files go to a private R2 bucket `<project>-submissions` in the EU, `<project>-submissions-preview` for previews. Each team has a folder `YYYY/<team>/` with `uploads/`, `README.md`, every earlier README in `readme/`, and the screenshots in `screenshots/`. Large files are uploaded in parts of 50 MB, so there is no limit from the functions.
 
 ### Cloudflare setup
@@ -182,7 +182,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@v0.2.0
+    uses: Hagenberg-Jams/jam-engine/.github/workflows/site.yml@v0.4.0
     with:
       project-name: my-jam
       site-url: https://example.org

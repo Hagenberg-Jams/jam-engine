@@ -228,7 +228,9 @@ describe('teams', () => {
         insert('3', 'Declined Team', 'declined');
         insert('4', 'Old Team', 'confirmed', 2025);
 
-        expect((await teams({ JAM_DB: db }, { ...gameConfig, teams: [] })).map((team) => team.slug)).toEqual(['ant-hill', 'zebra-games']);
+        expect((await teams({ JAM_DB: db }, { ...gameConfig, teams: null })).map((team) => team.slug)).toEqual(['ant-hill', 'zebra-games']);
+        // A list of the site wins, even an empty one, for example while the teams are not known yet.
+        expect(await teams({ JAM_DB: db }, { ...gameConfig, teams: [] })).toEqual([]);
     });
 });
 

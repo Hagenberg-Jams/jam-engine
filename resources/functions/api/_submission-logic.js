@@ -174,12 +174,12 @@ async function codeMatches(env, code) {
 }
 
 /**
- * The teams to choose from: the list of the site, or else the confirmed registrations of the jam.
+ * The teams to choose from: the list of the site, even an empty one, or without a list the confirmed registrations of the jam.
  */
 export async function teams(env, config) {
-    let list = config.teams ?? [];
+    let list = Array.isArray(config.teams) ? config.teams : [];
 
-    if (list.length === 0 && env.JAM_DB) {
+    if (!Array.isArray(config.teams) && env.JAM_DB) {
         const { results } = await env.JAM_DB.prepare("SELECT team_name FROM registrations WHERE year = ? AND status = 'confirmed'")
             .bind(config.year).all();
         list = results.map((row) => ({ name: row.team_name, slug: slug(row.team_name) }));

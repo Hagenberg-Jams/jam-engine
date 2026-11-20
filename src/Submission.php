@@ -81,16 +81,16 @@ class Submission
     }
 
     /**
-     * Teams from `_data/teams/{year}.yaml`, a list of names. Without the file, the function offers the
-     * confirmed registrations of the jam instead.
+     * Teams from `_data/teams/{year}.yaml`, a list of names. A file with an empty list offers no team yet.
+     * Without the file (null), the function offers the confirmed registrations of the jam instead.
      *
-     * @return array<int, array{name: string, slug: string}>
+     * @return array<int, array{name: string, slug: string}>|null
      */
-    public static function teams(): array
+    public static function teams(): ?array
     {
         $file = base_path('_data/teams/' . self::year() . '.yaml');
         if (!is_file($file)) {
-            return [];
+            return null;
         }
 
         $data = Yaml::parseFile($file);
