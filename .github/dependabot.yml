@@ -1,11 +1,21 @@
 version: 2
 updates:
+  # One pull request per week and ecosystem, like in the sites.
   - package-ecosystem: composer
     directory: /
     schedule: { interval: weekly }
+    groups:
+      composer:
+        patterns: ['*']
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
+    groups:
+      npm:
+        patterns: ['*']
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    groups:
+      actions:
+        patterns: ['*']
