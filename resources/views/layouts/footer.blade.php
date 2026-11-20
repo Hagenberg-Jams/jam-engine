@@ -76,7 +76,19 @@
     <!-- Copyright -->
     <div class="bg-gray-900 py-4">
         <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
-            <p>Copyright @php echo date('Y'); @endphp {{ $companyName }} | <a href="/imprint" class="hover:text-white transition-colors">Imprint</a> | <a href="#" id="cookie-settings-link" class="hover:text-white transition-colors">Cookie settings</a></p>
+            <p>Copyright @php echo date('Y'); @endphp {{ $companyName }} | <a href="/imprint" class="hover:text-white transition-colors">Imprint</a> | <a href="#" id="cookie-settings-link" class="hover:text-white transition-colors">Cookie settings</a>@php
+                // Admin pages for organisers, behind Cloudflare Access. Kept quiet, they are of no use to anyone else.
+                $adminLinks = array_filter([
+                    'registrations' => \HagenbergJams\JamEngine\Registration::enabled() ? 'Registrations' : null,
+                    'submissions' => \HagenbergJams\JamEngine\Submission::enabled() ? 'Submissions' : null,
+                ]);
+            @endphp
+                @if($adminLinks !== [])
+                    <span class="text-gray-500"> | Admin:
+                        @foreach($adminLinks as $path => $label)<a href="/admin/{{ $path }}" rel="nofollow" class="text-gray-500 hover:text-gray-300 transition-colors">{{ $label }}</a>{{ $loop->last ? '' : ', ' }}@endforeach
+                    </span>
+                @endif
+            </p>
         </div>
     </div>
 </footer>

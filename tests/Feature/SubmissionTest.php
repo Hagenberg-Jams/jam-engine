@@ -116,3 +116,16 @@ it('builds nothing of it while the upload is off', function (): void {
         ->and(file_exists("{$site}/functions/api/admin/_middleware.js"))->toBeFalse()
         ->and(file_exists("{$site}/functions/api/_access-config.json"))->toBeFalse();
 });
+
+it('links the upload page in the menu while it is open, and the admin pages quietly in the footer', function (): void {
+    $both = page(buildSite('game', prepare: withSubmission()), 'index.html');
+    $upload = page(buildSite('animation', prepare: withSubmission()), '2025.html');
+    $closed = page(buildSite('animation', prepare: withSubmission(['closes' => '2020-01-01 00:00'])), 'index.html');
+    $none = page(buildSite('animation'), 'index.html');
+
+    expect($both)->toMatch('#<a[^>]+href="/?submit\.html"[^>]*>\s*Submit\s*</a>#')
+        ->toContain('Admin:')->toContain('href="/admin/registrations"')->toContain('href="/admin/submissions"')
+        ->and($upload)->toMatch('#href="/?submit\.html"#')->toContain('href="/admin/submissions"')->not->toContain('href="/admin/registrations"')
+        ->and($closed)->not->toMatch('#href="/?submit\.html"#')->toContain('href="/admin/submissions"')
+        ->and($none)->not->toContain('submit.html')->not->toContain('Admin:');
+});

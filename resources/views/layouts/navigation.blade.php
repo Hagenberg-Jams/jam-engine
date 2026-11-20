@@ -91,7 +91,14 @@
             </li>
             @endif
 
-            {{-- 5) Imprint --}}
+            {{-- 6) Upload page, while uploads are open --}}
+            @if(\HagenbergJams\JamEngine\Submission::isOpen())
+            <li class="md:mx-2">
+                <x-navigation.navigation-link :item="NavigationItem::create('submit', 'Submit', 25)"/>
+            </li>
+            @endif
+
+            {{-- 7) Imprint --}}
             <li class="md:mx-2">
                 <x-navigation.navigation-link :item="NavigationItem::create('imprint', 'Imprint', 30)"/>
             </li>
