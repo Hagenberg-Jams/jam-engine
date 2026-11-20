@@ -37,6 +37,9 @@ it('builds the upload page and the functions for videos, with the teams of the s
         ->toContain('data-sitekey="0xSUBMITKEY"')
         ->toContain('accept=".mp4,.mov"')
         ->toContain('Your animation as a video file')
+        ->toContain('a short description in English. Start from our template')
+        ->toContain('of at least 1920×1080 pixels (PNG, JPG or WebP).</li>')
+        ->not->toContain('@if')->not->toContain('@endif')
         ->toContain('# Animation title')
         ->and(page($site, 'submit/README.md'))->toContain("## Team Members\n\n<!-- One person per line")->toContain('## Credits')->not->toContain('{team}')
         ->and($page)
@@ -91,7 +94,7 @@ it('offers a ZIP for each platform for games, and takes the teams from the regis
         '<!-- Optional: anything else players need to know, for example how to start the game or play it in the browser. Delete this section if you do not need it. -->',
         '',
     ]))
-        ->and(page($site, 'submit.html'))->toContain('id="platform"')->toContain('<option value="Linux">')->toContain('href="/submit/README.md" download="README.md"')
+        ->and(page($site, 'submit.html'))->toContain('in English, and the controls.')->toContain('One should show the start screen')->not->toContain('@if')->toContain('id="platform"')->toContain('<option value="Linux">')->toContain('href="/submit/README.md" download="README.md"')
         ->and($config)->toMatchArray(['year' => 2025, 'kind' => 'game', 'platforms' => ['Win', 'Mac', 'Linux', 'Web'], 'extensions' => ['zip'], 'teams' => null])
         ->and($config['closes'])->toBe('2026-01-31T23:59:00+01:00')
         // Both functions need the shared helpers, and the registration keeps working next to the upload.

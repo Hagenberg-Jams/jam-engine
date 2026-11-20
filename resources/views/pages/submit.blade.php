@@ -60,9 +60,9 @@
                 @else
                     <li><strong>Your animation as a video file</strong> ({{ strtoupper(implode(', ', $function['extensions'])) }}), in the best quality you have.</li>
                 @endif
-                <li><strong>README.md</strong> with the name of your {{ $project }}, your team, its members and a short description in English@if($game), and the controls@endif. Start from our template and fill in every section: <a href="/submit/README.md" download="README.md" class="font-semibold underline text-primary-700 dark:text-primary-300">Download the README template</a></li>
+                <li><strong>README.md</strong> with the name of your {{ $project }}, your team, its members and a short description in English{{ $game ? ', and the controls' : '' }}. Start from our template and fill in every section: <a href="/submit/README.md" download="README.md" class="font-semibold underline text-primary-700 dark:text-primary-300">Download the README template</a></li>
                 @if($shots['min'] > 0)
-                    <li><strong>{{ $shots['min'] }} {{ $game ? 'screenshots' : 'stills' }}</strong>@if($shots['width'] > 0) of at least {{ $shots['width'] }}×{{ $shots['height'] }} pixels @endif (PNG, JPG or WebP).@if($game) One should show the start screen, the others different phases of the game.@endif</li>
+                    <li><strong>{{ $shots['min'] }} {{ $game ? 'screenshots' : 'stills' }}</strong>{{ $shots['width'] > 0 ? " of at least {$shots['width']}×{$shots['height']} pixels" : '' }} (PNG, JPG or WebP).{{ $game ? ' One should show the start screen, the others different phases of the game.' : '' }}</li>
                 @endif
             </ul>
             <p>The README and the {{ $game ? 'screenshots' : 'stills' }} are needed once. When you upload a new version later, for example a bugfix, you only need the new file. The version number and the file name are chosen for you. Nothing you upload is overwritten.</p>
@@ -127,7 +127,7 @@
                 <div>
                     <label for="screenshots" class="{{ $label }}">{{ $game ? 'Screenshots' : 'Stills' }} <span id="screenshots-optional" class="hidden font-normal">(optional, replace the ones you uploaded before)</span></label>
                     <input id="screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple class="{{ $input }}">
-                    <p class="{{ $hint }}">{{ $shots['min'] }} to {{ $shots['max'] }} images@if($shots['width'] > 0), at least {{ $shots['width'] }}×{{ $shots['height'] }} pixels@endif. Select them all at once.</p>
+                    <p class="{{ $hint }}">{{ $shots['min'] }} to {{ $shots['max'] }} images{{ $shots['width'] > 0 ? ", at least {$shots['width']}×{$shots['height']} pixels" : '' }}. Select them all at once.</p>
                     <ul id="screenshot-problems" class="hidden mt-2 list-disc pl-6 text-amber-800 dark:text-amber-300"></ul>
                 </div>
             @endif
