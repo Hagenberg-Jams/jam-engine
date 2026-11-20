@@ -30,6 +30,8 @@ on:
         required: false
       JAM_REGISTRATION_NOTIFY:
         required: false
+      JAM_SUBMISSION_CODE:
+        required: false
 
 jobs:
   build:
@@ -87,16 +89,14 @@ jobs:
         run: |
           npx --yes wrangler@4 pages project list | grep -q " $PROJECT " || npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main
 
-      # Only when the registration form is on. It runs before the topic step, so that the topic secret
-      # is uploaded last, whatever the API does with existing variables.
+      # Only when the registration form is on.
       - name: Set up the registration database
+        id: registration
         if: steps.deploy.outputs.enabled == 'true' && hashFiles('functions/api/_registration-config.json') != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PROJECT: ${{ inputs.project-name }}
-          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
-          EMAIL_API_TOKEN: ${{ secrets.EMAIL_API_TOKEN }}
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
@@ -131,19 +131,68 @@ jobs:
             (cd "$dir" && npx --yes wrangler@4 d1 execute "$name" --remote --command "$purge")
             ids+=("$id")
           done
+          echo "production=${ids[0]}" >> "$GITHUB_OUTPUT"
+          echo "preview=${ids[1]}" >> "$GITHUB_OUTPUT"
 
-          body=$(jq -n --arg production "${ids[0]}" --arg preview "${ids[1]}" --arg account "$CLOUDFLARE_ACCOUNT_ID" \
-            --arg turnstile "$TURNSTILE_SECRET" --arg mail "$EMAIL_API_TOKEN" '
+      # Only when the upload page is on. A private bucket in the EU for production and one for previews,
+      # so that test uploads stay apart. The deploy token needs "Workers R2 Storage: Edit" to create them.
+      - name: Set up the submission storage
+        id: submission
+        if: steps.deploy.outputs.enabled == 'true' && hashFiles('functions/api/_submission-config.json') != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ inputs.project-name }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" -H "cf-r2-jurisdiction: eu")
+          for suffix in "" "-preview"; do
+            name="$PROJECT-submissions$suffix"
+            status=$(curl -sS -o /dev/null -w '%{http_code}' "${auth[@]}" "$api/$name")
+            if [ "$status" = "404" ]; then
+              curl -fsS "${auth[@]}" -X POST "$api" -d "$(jq -n --arg name "$name" '{name: $name}')" > /dev/null
+              echo "Created the bucket $name."
+            elif [ "$status" != "200" ]; then
+              echo "::warning::Cannot check the bucket $name ($status). Give the deploy token \"Workers R2 Storage: Edit\", or create the bucket in the EU jurisdiction by hand."
+            fi
+          done
+          echo "production=$PROJECT-submissions" >> "$GITHUB_OUTPUT"
+          echo "preview=$PROJECT-submissions-preview" >> "$GITHUB_OUTPUT"
+
+      # One update of the Pages project for the database, the bucket and the variables of the functions.
+      # It runs before the topic step, so that the topic secret is uploaded last, whatever the API does with existing variables.
+      - name: Configure the Pages project
+        if: steps.registration.outcome == 'success' || steps.submission.outcome == 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ inputs.project-name }}
+          DB_PRODUCTION: ${{ steps.registration.outputs.production }}
+          DB_PREVIEW: ${{ steps.registration.outputs.preview }}
+          BUCKET_PRODUCTION: ${{ steps.submission.outputs.production }}
+          BUCKET_PREVIEW: ${{ steps.submission.outputs.preview }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          EMAIL_API_TOKEN: ${{ secrets.EMAIL_API_TOKEN }}
+          JAM_SUBMISSION_CODE: ${{ secrets.JAM_SUBMISSION_CODE }}
+        run: |
+          set -euo pipefail
+          body=$(jq -n --arg account "$CLOUDFLARE_ACCOUNT_ID" --arg turnstile "$TURNSTILE_SECRET" --arg mail "$EMAIL_API_TOKEN" \
+            --arg code "$JAM_SUBMISSION_CODE" --arg dbProduction "$DB_PRODUCTION" --arg dbPreview "$DB_PREVIEW" \
+            --arg bucketProduction "$BUCKET_PRODUCTION" --arg bucketPreview "$BUCKET_PREVIEW" '
             def secret($name; $value): if $value == "" then {} else {($name): {type: "secret_text", value: $value}} end;
-            def environment($db): {
-              d1_databases: {JAM_DB: {id: $db}},
-              env_vars: ({CF_ACCOUNT_ID: {type: "plain_text", value: $account}}
-                + secret("TURNSTILE_SECRET"; $turnstile) + secret("EMAIL_API_TOKEN"; $mail))
-            };
-            {deployment_configs: {production: environment($production), preview: environment($preview)}}')
-          curl -fsS "${auth[@]}" -X PATCH "$api/pages/projects/$PROJECT" -d "$body" > /dev/null
-          if [ -z "$EMAIL_API_TOKEN" ]; then echo "::warning::EMAIL_API_TOKEN is not set, so the registration sends no mails."; fi
-          if [ -z "$TURNSTILE_SECRET" ]; then echo "::warning::TURNSTILE_SECRET is not set, so every registration fails the spam check."; fi
+            def environment($db; $bucket):
+              (if $db == "" then {} else {d1_databases: {JAM_DB: {id: $db}}} end)
+              + (if $bucket == "" then {} else {r2_buckets: {JAM_SUBMISSIONS: {name: $bucket, jurisdiction: "eu"}}} end)
+              + {env_vars: ({CF_ACCOUNT_ID: {type: "plain_text", value: $account}}
+                + secret("TURNSTILE_SECRET"; $turnstile) + secret("EMAIL_API_TOKEN"; $mail)
+                + (if $bucket == "" then {} else secret("JAM_SUBMISSION_CODE"; $code) end))};
+            {deployment_configs: {production: environment($dbProduction; $bucketProduction), preview: environment($dbPreview; $bucketPreview)}}')
+          curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+            -X PATCH "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" -d "$body" > /dev/null
+          if [ -z "$EMAIL_API_TOKEN" ]; then echo "::warning::EMAIL_API_TOKEN is not set, so the functions send no mails."; fi
+          if [ -z "$TURNSTILE_SECRET" ]; then echo "::warning::TURNSTILE_SECRET is not set, so every form fails the spam check."; fi
+          if [ -n "$BUCKET_PRODUCTION" ] && [ -z "$JAM_SUBMISSION_CODE" ]; then echo "::warning::JAM_SUBMISSION_CODE is not set, so nobody can upload."; fi
 
       - name: Transfer the topic to Cloudflare
         if: steps.deploy.outputs.enabled == 'true' && github.ref == 'refs/heads/main'

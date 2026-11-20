@@ -133,6 +133,39 @@ The workflow then creates one D1 database for production and one for previews, a
 
 To run the functions locally, use a short storage path on Windows, for example `npx wrangler pages dev _site --d1 JAM_DB --persist-to C:/tmp/jam`. Long paths make the local database fail.
 
+## Upload page
+
+With `submission.enabled`, a site gets a page at `/submit`, where teams upload their project at the end of the jam. Teams choose their team, enter the upload code from the announcement and upload:
+
+- **Games:** one ZIP file for each platform. **Animations:** one video file. The preset sets which.
+- **README.md:** the page offers a template with the team filled in. The function checks that the title is replaced and every required section has text. HTML comments in the template are hints and do not count.
+- **Screenshots:** a number of images, checked for their size in the browser.
+
+README and screenshots are needed with the first upload of a team. Later uploads, for example a bugfix, may leave them out. The page suggests the next version (1.0.0, then 1.0.1, …) and builds the file name, for example `TheAwesomes_MostAwesomeGame_Win_1.0.0.zip`. A version must be higher than the last one of the same platform, so nothing is ever overwritten. Uploads after the deadline are marked as late, and organisers get a mail for each upload.
+
+```php
+'submission' => [
+    'enabled' => true,
+    'deadline' => '',                    // empty: the end of the latest jam; later uploads are marked as late
+    'closes' => '2027-01-31 23:59',      // empty: open while enabled is true
+    'max_size_mb' => 4096,
+    'screenshots' => ['min' => 4, 'max' => 8, 'width' => 1920, 'height' => 1080],
+    'texts' => ['intro' => ''],
+    // turnstile_site_key, notify and from: empty uses the settings of the registration form.
+],
+```
+
+- **Teams:** `_data/teams/YYYY.yaml` with a list of team names, for example `- The Awesomes`. Without the file, the page offers the confirmed registrations of the registration form.
+- **Storage:** the files go to a private R2 bucket `<project>-submissions` in the EU, `<project>-submissions-preview` for previews. Each team has a folder `YYYY/<team>/` with `uploads/`, `README.md`, every earlier README in `readme/`, and the screenshots in `screenshots/`. Large files are uploaded in parts of 50 MB, so there is no limit from the functions.
+
+### Cloudflare setup
+
+1. Give the deploy token `Workers R2 Storage: Edit`. Without it, create the two buckets by hand in the EU jurisdiction.
+2. Create a Turnstile widget for the domain and the `pages.dev` host, if the registration form does not have one yet. Put the site key in the config and the secret key in the GitHub secret `TURNSTILE_SECRET`.
+3. Store the upload code as the GitHub secret `JAM_SUBMISSION_CODE`, and announce it to the teams, for example on Discord. It is compared without case.
+
+The workflow then creates the buckets and binds them to the Pages project as `JAM_SUBMISSIONS`. To try the page locally, build the site and run `npx wrangler pages dev _site --r2 JAM_SUBMISSIONS --binding JAM_SUBMISSION_CODE=test --binding TURNSTILE_SECRET=1x0000000000000000000000000000000AA` with the Turnstile test key `1x00000000000000000000AA` in the config.
+
 ## Deployment
 
 Sites use the reusable workflow with a short workflow file of their own:

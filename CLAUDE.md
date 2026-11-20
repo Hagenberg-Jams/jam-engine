@@ -25,7 +25,7 @@ npm run test:browser   # Playwright
 - `src/JamData.php`: reads `_data/`, and removes a topic before its release.
 - `src/JamSchedule.php`: upcoming jam and topic release logic.
 - `resources/views/components/project/`: one partial per project section.
-- `resources/functions/api/`: the Cloudflare Pages Function, copied into sites by `PrepareFunctionsBuildTask`.
+- `resources/functions/api/`: the Cloudflare Pages Functions for the topic, the registration and the upload page, copied into sites by the `Prepare*BuildTask` classes. `_shared.js` holds what they share.
 - `tests/Fixtures/`: a skeleton site plus one data set per preset, built for real by the tests.
 - `.github/workflows/site.yml`: the reusable workflow that all sites deploy with.
 

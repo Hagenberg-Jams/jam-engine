@@ -12,6 +12,7 @@ use HagenbergJams\JamEngine\Actions\CopyRobotsTxtBuildTask;
 use HagenbergJams\JamEngine\Actions\PreBuildTasks\TransferMediaAssets;
 use HagenbergJams\JamEngine\Actions\PrepareFunctionsBuildTask;
 use HagenbergJams\JamEngine\Actions\PrepareRegistrationBuildTask;
+use HagenbergJams\JamEngine\Actions\PrepareSubmissionBuildTask;
 use HagenbergJams\JamEngine\Commands\AddProjectCommand;
 use HagenbergJams\JamEngine\Commands\AddSponsorCommand;
 use HagenbergJams\JamEngine\Commands\CheckLinksCommand;
@@ -46,6 +47,7 @@ class JamEngineServiceProvider extends ServiceProvider
             CopyRobotsTxtBuildTask::class,
             PrepareFunctionsBuildTask::class,
             PrepareRegistrationBuildTask::class,
+            PrepareSubmissionBuildTask::class,
         ];
 
         /** @var array<int, string> $siteTasks */

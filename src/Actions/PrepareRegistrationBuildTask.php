@@ -18,6 +18,7 @@ class PrepareRegistrationBuildTask extends PostBuildTask
 
     /** Function files, relative to resources/functions/api. */
     protected const FILES = [
+        '_shared.js',
         '_registration-logic.js',
         '_access.js',
         'registration/index.js',
@@ -33,7 +34,7 @@ class PrepareRegistrationBuildTask extends PostBuildTask
 
         if (!Registration::enabled()) {
             // Remove the files of an earlier build, so a disabled form cannot be reached.
-            foreach ([...self::FILES, '_registration-config.json'] as $file) {
+            foreach ([...array_diff(self::FILES, ['_shared.js']), '_registration-config.json'] as $file) {
                 if (is_file("{$target}/{$file}")) {
                     unlink("{$target}/{$file}");
                 }

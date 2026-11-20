@@ -44,4 +44,21 @@ return [
         'print_sheets' => true,
         'downloads' => true,
     ],
+
+    'submission' => [
+        'kind' => 'game',
+        'platforms' => ['Win', 'Mac', 'Linux', 'Web'],
+        'extensions' => ['zip'],
+        'screenshots' => ['min' => 4, 'max' => 8, 'width' => 1920, 'height' => 1080],
+        'readme' => [
+            'title' => 'Game name',
+            'title_hint' => 'Replace "Game name" with the name of your game.',
+            'sections' => [
+                ['heading' => 'Team', 'required' => true, 'hint' => 'Your team name.'],
+                ['heading' => 'Team members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.'],
+                ['heading' => 'Description', 'required' => true, 'hint' => 'In English: what is the setting or story, and what must the player do to win?'],
+                ['heading' => 'How to play', 'aliases' => ['Controls'], 'required' => true, 'hint' => 'The controls, or how to play.'],
+            ],
+        ],
+    ],
 ];

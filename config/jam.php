@@ -90,6 +90,40 @@ return [
         ],
     ],
 
+    // Uploads at the end of a jam at /submit, see the README of the engine.
+    // It needs a Cloudflare R2 bucket, Turnstile and the secret JAM_SUBMISSION_CODE.
+    'submission' => [
+        'enabled' => false,
+        // Uploads after this time are marked as late. Empty: the end of the latest jam.
+        'deadline' => '',
+        // From this time on, nothing can be uploaded any more. Empty: open while enabled is true.
+        'closes' => '',
+        // 'game': a ZIP file for each platform. 'video': one video file. Set by the preset.
+        'kind' => 'game',
+        'platforms' => ['Win', 'Mac', 'Linux', 'Web'],
+        'extensions' => ['zip'],
+        'max_size_mb' => 4096,
+        // Needed with the first upload of a team. Later uploads may leave them out.
+        'screenshots' => ['min' => 4, 'max' => 8, 'width' => 1920, 'height' => 1080],
+        // The README.md: a title as the first heading, then the sections. Hints in the template are HTML comments.
+        'readme' => [
+            'title' => 'Project name',
+            'title_hint' => 'Replace "Project name" with the name of your project.',
+            'sections' => [
+                ['heading' => 'Team', 'required' => true, 'hint' => 'Your team name.'],
+                ['heading' => 'Team members', 'aliases' => ['Members'], 'required' => true, 'hint' => 'One person per line, with the name that should appear on the website.'],
+                ['heading' => 'Description', 'required' => true, 'hint' => 'A short description in English.'],
+            ],
+        ],
+        // Empty: the settings of the registration form.
+        'turnstile_site_key' => '',
+        'notify' => [],
+        'from' => '',
+        'texts' => [
+            'intro' => '',
+        ],
+    ],
+
     'downloads' => [
         // When set, download links use {base_url}/{path}/{year}/{file}.
         'base_url' => null,

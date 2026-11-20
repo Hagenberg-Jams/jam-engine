@@ -97,7 +97,7 @@ class Registration
      * @param array<mixed> $configured
      * @return array<int, string>
      */
-    protected static function notify(array $configured): array
+    public static function notify(array $configured): array
     {
         $secret = preg_split('/[\s,;]+/', self::string(env('JAM_REGISTRATION_NOTIFY', ''))) ?: [];
         $addresses = array_map(fn(mixed $address): string => trim(self::string($address)), [...$configured, ...$secret]);
