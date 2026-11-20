@@ -10,6 +10,9 @@ use function exec;
 use function file_exists;
 use function file_put_contents;
 use function glob;
+
+use HagenbergJams\JamEngine\Submission;
+
 use function hash_file;
 
 use Illuminate\Console\Command;
@@ -42,7 +45,8 @@ class AddProjectCommand extends Command
     /** @var array<int, string> */
     protected $aliases = ['gamejam:add-game'];
 
-    protected $signature = 'jam:add-project {--year= : Year of the jam}';
+    protected $signature = 'jam:add-project {--year= : Year of the jam}
+                            {--submission= : A team folder in submissions/{year}/ from jam:fetch-submissions, whose README, screenshots and ZIP files are used}';
 
     protected $description = 'Add a new project to a jam year with image processing';
 
@@ -53,6 +57,16 @@ class AddProjectCommand extends Command
     protected string $projectSlug = '';
     /** @var array<string> */
     protected array $processedFiles = [];
+
+    /**
+     * What the README of a submission says, and the platform of each of its ZIP files.
+     *
+     * @var array{name: string, team: string, members: array<int, string>, description: string, controls: string|null, platforms: array<string, string>}|null
+     */
+    protected ?array $submission = null;
+
+    /** Platforms of the upload page, as add-project names them. */
+    protected const SUBMISSION_PLATFORMS = ['Win' => 'Windows', 'Mac' => 'macOS', 'Linux' => 'Linux', 'Web' => 'Web'];
 
     public function handle(): int
     {
@@ -78,6 +92,11 @@ class AddProjectCommand extends Command
                 return 1;
             }
             $this->createEmptyYamlFile($yamlFile);
+        }
+
+        $submission = $this->option('submission');
+        if (is_string($submission) && $submission !== '' && !$this->loadSubmission($submission)) {
+            return 1;
         }
 
         // Validate images exist
@@ -221,7 +240,8 @@ class AddProjectCommand extends Command
      */
     protected function collectGameData(): ?array
     {
-        $nameInput = $this->ask('Project name');
+        $submission = $this->submission;
+        $nameInput = $this->ask('Project name', $submission['name'] ?? null);
         $name = is_string($nameInput) ? $nameInput : '';
         if (empty($name)) {
             $this->error('Project name is required');
@@ -239,10 +259,28 @@ class AddProjectCommand extends Command
         }
 
         if ($this->hasSection('controls')) {
-            $controlsText = $this->askForControlsText();
+            $controlsText = $submission !== null ? $submission['controls'] : $this->askForControlsText();
         }
 
         $videos = $this->hasSection('video') ? $this->askForVideos() : [];
+
+        // A submission brings description, team and members from its README. They can be changed in the YAML file later.
+        if ($submission !== null) {
+            $this->info("From the README: team {$submission['team']}, " . count($submission['members']) . ' member(s): ' . implode(', ', $submission['members']));
+
+            return [
+                'name' => $name,
+                'players' => $players,
+                'controls' => $controls,
+                'controlsText' => $controlsText,
+                'videos' => $videos,
+                'description' => $submission['description'],
+                'teamName' => $submission['team'],
+                'teamMembers' => $submission['members'],
+                'winner' => $this->askForWinner(),
+            ];
+        }
+
         $description = $this->askForDescription();
         $registered = $this->chooseRegisteredTeam();
         if ($registered !== null) {
@@ -265,6 +303,72 @@ class AddProjectCommand extends Command
             'teamMembers' => $teamMembers,
             'winner' => $winner,
         ];
+    }
+
+    /**
+     * Reads a submission fetched by jam:fetch-submissions and puts its screenshots and ZIP files into _input/,
+     * unless something is already there. The first screenshot is also the header image.
+     */
+    protected function loadSubmission(string $team): bool
+    {
+        $dir = base_path("submissions/{$this->year}/{$team}");
+        if (!is_file("{$dir}/README.md")) {
+            $this->error("No README.md in submissions/{$this->year}/{$team}/. Run php hyde jam:fetch-submissions --year={$this->year} first.");
+
+            return false;
+        }
+
+        $readme = Submission::parseReadme((string) file_get_contents("{$dir}/README.md"));
+        $sections = $readme['sections'];
+        $members = Submission::listItems($sections['Team Members'] ?? '');
+        $controls = trim(implode("\n\n", array_filter([$sections['Controls'] ?? '', $sections['How to Play'] ?? ''])));
+
+        $screenshots = $this->getImageFiles("{$dir}/screenshots");
+        $this->stage($screenshots === [] ? [] : [$screenshots[0]], $this->inputHeaderDir);
+        $this->stage($screenshots, $this->inputScreenshotsDir);
+
+        $platforms = [];
+        $zips = glob("{$dir}/uploads/*.{zip,ZIP}", GLOB_BRACE) ?: [];
+        if ($this->hasSection('downloads')) {
+            $this->stage($zips, $this->inputDownloadDir);
+            foreach ($zips as $zip) {
+                $platform = FetchSubmissionsCommand::describe(basename($zip))['platform'] ?? '';
+                $platforms[basename($zip)] = self::SUBMISSION_PLATFORMS[$platform] ?? $platform;
+            }
+        }
+
+        $this->submission = [
+            'name' => $readme['title'],
+            'team' => trim($sections['Team'] ?? ''),
+            'members' => $members,
+            'description' => $sections['Description'] ?? '',
+            'controls' => $controls !== '' ? $controls : null,
+            'platforms' => $platforms,
+        ];
+
+        $this->info("Using the submission of {$team}: {$readme['title']}, " . count($screenshots) . ' screenshot(s), ' . count($platforms) . ' download(s).');
+
+        return true;
+    }
+
+    /**
+     * Copies files into an input folder, unless it already holds files, which then win.
+     *
+     * @param array<int, string> $files
+     */
+    protected function stage(array $files, string $dir): void
+    {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        if ($files === [] || (glob("{$dir}/*.*") ?: []) !== []) {
+            return;
+        }
+
+        foreach ($files as $file) {
+            copy($file, "{$dir}/" . basename($file));
+        }
     }
 
     /**
@@ -766,16 +870,19 @@ class AddProjectCommand extends Command
         foreach ($downloadFiles as $downloadFile) {
             $originalFileName = basename($downloadFile);
 
-            // Ask for platform interactively
+            // The platform of a submission is in its file name. Otherwise ask for it.
             $this->info("File: {$originalFileName}");
-            $this->line("Select platform:");
-            foreach ($platformOptions as $key => $platform) {
-                $this->line("  {$key}. {$platform}");
-            }
+            $platform = $this->submission['platforms'][$originalFileName] ?? null;
+            if ($platform === null) {
+                $this->line("Select platform:");
+                foreach ($platformOptions as $key => $option) {
+                    $this->line("  {$key}. {$option}");
+                }
 
-            $selected = $this->ask('Platform (1-4)', '1');
-            $selectedKey = is_string($selected) ? $selected : '1';
-            $platform = $platformOptions[$selectedKey] ?? $platformOptions['1'];
+                $selected = $this->ask('Platform (1-4)', '1');
+                $selectedKey = is_string($selected) ? $selected : '1';
+                $platform = $platformOptions[$selectedKey] ?? $platformOptions['1'];
+            }
 
             // Generate new filename: {slug}-{Platform}.zip
             $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);

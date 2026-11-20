@@ -142,6 +142,50 @@ class Submission
     }
 
     /**
+     * Reads an uploaded README.md like the function checks it: the title from the first heading, and the text of each
+     * section under its heading as written in the config, also when the team used one of its other spellings.
+     * Hints in HTML comments are left out.
+     *
+     * @return array{title: string, sections: array<string, string>}
+     */
+    public static function parseReadme(string $text): array
+    {
+        $content = (string) preg_replace(['/^\x{FEFF}/u', '/<!--.*?-->/s'], '', str_replace(["\r\n", "\r"], "\n", $text));
+        $title = preg_match('/^#[ \t]+(.+?)[ \t#]*$/m', $content, $match) === 1 ? trim($match[1]) : '';
+        $normalize = fn(string $heading): string => trim((string) preg_replace('/[^a-z0-9]+/', ' ', strtolower($heading)));
+
+        $found = [];
+        $parts = preg_split('/^##[ \t]+(.+?)[ \t#]*$/m', $content, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [];
+        for ($i = 1; $i < count($parts); $i += 2) {
+            $found[$normalize($parts[$i])] = trim((string) preg_replace('/^[ \t]*([-*+]|\d+\.)[ \t]*$/m', '', $parts[$i + 1] ?? ''));
+        }
+
+        $sections = [];
+        foreach (self::sections() as $section) {
+            foreach ([$section['heading'], ...$section['aliases']] as $name) {
+                if (isset($found[$normalize($name)])) {
+                    $sections[$section['heading']] = $found[$normalize($name)];
+                    break;
+                }
+            }
+        }
+
+        return ['title' => $title, 'sections' => $sections];
+    }
+
+    /**
+     * The names of a list in the README, for example of the team members.
+     *
+     * @return array<int, string>
+     */
+    public static function listItems(string $text): array
+    {
+        $items = array_map(fn(string $line): string => trim((string) preg_replace('/^[ \t]*([-*+]|\d+\.)[ \t]+/', '', $line)), explode("\n", $text));
+
+        return array_values(array_filter($items, fn(string $item): bool => $item !== ''));
+    }
+
+    /**
      * @return array<int, array{heading: string, aliases: array<int, string>, required: bool, hint: string, list: bool}>
      */
     public static function sections(): array

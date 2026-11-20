@@ -166,6 +166,17 @@ README and screenshots are needed with the first upload of a team. Later uploads
 
 The workflow then creates the buckets and binds them to the Pages project as `JAM_SUBMISSIONS`. To try the page locally, build the site and run `npx wrangler pages dev _site --r2 JAM_SUBMISSIONS --binding JAM_SUBMISSION_CODE=test --binding TURNSTILE_SECRET=1x0000000000000000000000000000000AA` with the Turnstile test key `1x00000000000000000000AA` in the config.
 
+### Adding the submissions to the site
+
+```bash
+php hyde jam:fetch-submissions                          # every team, latest file of each platform
+php hyde jam:add-project --submission=the-awesomes      # one project from the folder of a team
+```
+
+`jam:fetch-submissions` downloads to `submissions/YYYY/<team>/` (add `/submissions` to `.gitignore`): the latest file of each platform, the README.md and the screenshots, and puts the README.md into each ZIP file. `--all` takes every version, `--team=<folder>` only some teams, `--from=<folder>` a local copy of the bucket instead of R2. It needs `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `.env`, from an R2 token that can read the bucket. The bucket is `<project>-submissions`, or `R2_SUBMISSIONS_BUCKET`. A second run only downloads what changed.
+
+`jam:add-project --submission=<team>` takes name, team, members, description and controls from the README, the first screenshot as header image, all screenshots for the gallery, and the ZIP files with their platform. It only asks for what is not in the README, for example the number of players and the awards.
+
 ## Deployment
 
 Sites use the reusable workflow with a short workflow file of their own:
@@ -214,7 +225,7 @@ Do not merge engine updates into a site from one week before its jam until the e
 
 ## Commands
 
-`jam:create-jam`, `jam:topic-release`, `jam:add-project`, `jam:add-sponsor`, `jam:remove-sponsor`, `jam:validate`, `jam:check-links`, `jam:migrate-data`, `jam:print`, `jam:sync-r2`, `jam:update-checksums` and `jam:convert-images`.
+`jam:create-jam`, `jam:topic-release`, `jam:add-project`, `jam:fetch-submissions`, `jam:add-sponsor`, `jam:remove-sponsor`, `jam:validate`, `jam:check-links`, `jam:migrate-data`, `jam:print`, `jam:sync-r2`, `jam:update-checksums` and `jam:convert-images`.
 
 ## Development
 

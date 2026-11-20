@@ -18,6 +18,7 @@ use HagenbergJams\JamEngine\Commands\AddSponsorCommand;
 use HagenbergJams\JamEngine\Commands\CheckLinksCommand;
 use HagenbergJams\JamEngine\Commands\ConvertImagesCommand;
 use HagenbergJams\JamEngine\Commands\CreateJamCommand;
+use HagenbergJams\JamEngine\Commands\FetchSubmissionsCommand;
 use HagenbergJams\JamEngine\Commands\MigrateDataCommand;
 use HagenbergJams\JamEngine\Commands\PrintProjectSheetsCommand;
 use HagenbergJams\JamEngine\Commands\RemoveSponsorCommand;
@@ -74,6 +75,7 @@ class JamEngineServiceProvider extends ServiceProvider
                 CheckLinksCommand::class,
                 ConvertImagesCommand::class,
                 CreateJamCommand::class,
+                FetchSubmissionsCommand::class,
                 MigrateDataCommand::class,
                 PrintProjectSheetsCommand::class,
                 RemoveSponsorCommand::class,

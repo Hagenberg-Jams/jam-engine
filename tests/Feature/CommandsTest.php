@@ -161,3 +161,95 @@ it('takes team and shown names from the registration export', function (): void 
     expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
         ->and($data)->toContain('Night Owls')->toContain('Annie')->toContain('Bo Real');
 })->skip(fn(): bool => !magickAvailable(), 'ImageMagick (magick) is not installed');
+
+/** A folder laid out like the submission bucket, with two versions for Windows and one for Linux. */
+function submissionMirror(bool $images = false): string
+{
+    $mirror = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'jam-submissions-' . uniqid();
+    $team = "{$mirror}/2025/the-awesomes";
+    mkdir("{$team}/uploads", 0777, true);
+    mkdir("{$team}/screenshots/s1", 0777, true);
+
+    foreach (['Win_1.0.0', 'Win_1.0.1', 'Linux_1.0.0'] as $build) {
+        $zip = new ZipArchive();
+        $zip->open("{$team}/uploads/TheAwesomes_CatQuest_{$build}.zip", ZipArchive::CREATE);
+        $zip->addFromString('CatQuest.exe', "build {$build}");
+        $zip->addFromString('README.md', 'an old README');
+        $zip->close();
+    }
+
+    file_put_contents("{$team}/README.md", implode("\n", [
+        '# Cat Quest', '', '<!-- Replace "Game name" with the name of your game. -->', '',
+        '## Team', '', 'The Awesomes', '',
+        '## Team Members', '', '- Ann Example', '- Bo Tester', '',
+        '## Description', '', 'You are a cat in space. Collect all fish to win.', '',
+        '## Controls', '', '- **Movement:** WASD', '',
+        '## How to Play', '', 'Start CatQuest.exe.', '',
+    ]));
+
+    $files = [];
+    for ($i = 1; $i <= 4; $i++) {
+        $path = "{$team}/screenshots/s1/{$i}.png";
+        $images ? exec('magick -size 1920x1080 xc:blue ' . escapeshellarg($path)) : file_put_contents($path, "png {$i}");
+        $files[] = "s1/{$i}.png";
+    }
+    file_put_contents("{$team}/screenshots/current.json", json_encode(['stamp' => 's1', 'files' => $files]));
+
+    return $mirror;
+}
+
+it('fetches the latest build of each platform and puts the README into the ZIP files', function (): void {
+    $site = fixtureCopy('game');
+    $mirror = submissionMirror();
+
+    $process = runHyde($site, "jam:fetch-submissions --year=2025 --from={$mirror}");
+    $target = "{$site}/submissions/2025/the-awesomes";
+    $uploads = array_map('basename', glob("{$target}/uploads/*.zip") ?: []);
+    sort($uploads);
+    $zip = new ZipArchive();
+    $zip->open("{$target}/uploads/TheAwesomes_CatQuest_Win_1.0.1.zip");
+
+    expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
+        ->and($process->getOutput())->toContain('Cat Quest')
+        ->and($uploads)->toBe(['TheAwesomes_CatQuest_Linux_1.0.0.zip', 'TheAwesomes_CatQuest_Win_1.0.1.zip'])
+        ->and($zip->getFromName('README.md'))->toBe(file_get_contents("{$mirror}/2025/the-awesomes/README.md"))
+        ->and($zip->getFromName('CatQuest.exe'))->toBe('build Win_1.0.1')
+        ->and(glob("{$target}/screenshots/*.png"))->toHaveCount(4)
+        ->and(file_exists("{$target}/screenshots/01.png"))->toBeTrue();
+    $zip->close();
+
+    // A second run keeps the files it fetched before, with their README.
+    touch("{$target}/uploads/TheAwesomes_CatQuest_Win_1.0.1.zip", 1000000000);
+    expect(runHyde($site, "jam:fetch-submissions --year=2025 --from={$mirror}")->getExitCode())->toBe(0)
+        ->and(filemtime("{$target}/uploads/TheAwesomes_CatQuest_Win_1.0.1.zip"))->toBe(1000000000);
+});
+
+it('fetches every version on request, and only the chosen teams', function (): void {
+    $site = fixtureCopy('game');
+    $mirror = submissionMirror();
+
+    runHyde($site, "jam:fetch-submissions --year=2025 --all --team=the-awesomes --from={$mirror}");
+    $other = runHyde($site, "jam:fetch-submissions --year=2025 --team=someone-else --from={$mirror}");
+
+    expect(glob("{$site}/submissions/2025/the-awesomes/uploads/*.zip"))->toHaveCount(3)
+        ->and($other->getOutput())->toContain('No submissions found');
+});
+
+it('adds a project from a submission with the data of its README', function (): void {
+    $site = fixtureCopy('game');
+    $mirror = submissionMirror(images: true);
+    runHyde($site, "jam:fetch-submissions --year=2025 --from={$mirror}");
+
+    // Name from the README (Enter), players, control types, not a winner.
+    $process = runWithInput($site, 'jam:add-project --year=2025 --submission=the-awesomes', ['', '1', '1,2', 'no']);
+    $data = (string) file_get_contents("{$site}/_data/projects/2025.yaml");
+
+    expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
+        ->and($data)->toContain('Cat Quest')->toContain('The Awesomes')->toContain('Ann Example')->toContain('Bo Tester')
+        ->toContain('Collect all fish to win.')->toContain('**Movement:** WASD')->toContain('Start CatQuest.exe.')
+        ->toContain('platform: Windows')->toContain('platform: Linux')
+        ->and(file_exists("{$site}/games/2025/cat-quest-Windows.zip"))->toBeTrue()
+        ->and(file_exists("{$site}/_media/2025/cat-quest_header.webp"))->toBeTrue()
+        ->and(glob("{$site}/_media/2025/cat-quest_image*_full.webp"))->toHaveCount(4)
+        ->and(runHyde($site, 'jam:validate')->getExitCode())->toBe(0);
+})->skip(fn(): bool => !magickAvailable(), 'ImageMagick (magick) is not installed');
