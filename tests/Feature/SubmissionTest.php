@@ -58,7 +58,9 @@ it('builds the upload page and the functions for videos, with the teams of the s
             'from' => 'noreply@example.test',
             'teams' => [['name' => 'The Awesomes', 'slug' => 'the-awesomes'], ['name' => 'Pixel Pirates', 'slug' => 'pixel-pirates']],
         ])
-        ->and($config['readme']['sections'][3])->toBe(['heading' => 'Credits', 'aliases' => [], 'required' => false]);
+        // Optional sections reach the function as not required, wherever the preset puts them.
+        ->and(array_values(array_filter($config['readme']['sections'], fn(array $section): bool => $section['heading'] === 'Credits')))
+        ->toBe([['heading' => 'Credits', 'aliases' => [], 'required' => false]]);
 });
 
 it('offers a ZIP for each platform for games, and takes the teams from the registration without a list', function (): void {
