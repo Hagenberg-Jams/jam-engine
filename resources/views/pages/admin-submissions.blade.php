@@ -30,6 +30,11 @@
                     <option value="late">teams with late uploads only</option>
                 </select>
             </label>
+            <label id="category-filter-label" class="hidden items-center gap-2 text-sm">in
+                <select id="category-filter" class="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1">
+                    <option value="">all categories</option>
+                </select>
+            </label>
         </div>
 
         <div id="admin-error" class="hidden rounded-lg p-4 mb-6 bg-red-100 dark:bg-red-900 text-red-900 dark:text-red-100" role="alert"></div>
@@ -45,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var errorBox = document.getElementById('admin-error');
     var summary = document.getElementById('admin-summary');
     var filter = document.getElementById('filter');
+    var categoryFilter = document.getElementById('category-filter');
     var data = null;
 
     function element(tag, className, text) {
@@ -62,7 +68,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var colours = {
             ok: 'bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100',
             late: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
-            missing: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+            missing: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
+            category: 'bg-primary-100 text-primary-900 dark:bg-primary-900 dark:text-primary-100'
         };
         return element('span', 'text-xs font-semibold px-2 py-1 rounded ' + colours[kind], text);
     }
@@ -89,6 +96,8 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (team.onTime) { head.appendChild(badge('on time', 'ok')); }
         else { head.appendChild(badge('late only', 'late')); }
         if (!team.listed) { head.appendChild(badge('not in the team list', 'missing')); }
+        if (team.category) { head.appendChild(badge(team.category.name, 'category')); }
+        else if (data.categories.length > 0 && team.uploads.length > 0) { head.appendChild(badge('no category', 'missing')); }
         var latest = Object.keys(team.latest).map(function (platform) { return (data.kind === 'game' ? platform + ' ' : '') + team.latest[platform]; });
         if (latest.length) { head.appendChild(element('span', 'text-sm text-gray-600 dark:text-gray-400', 'Latest: ' + latest.join(', '))); }
         box.appendChild(head);
@@ -155,6 +164,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filter.value === 'uploaded') { return team.uploads.length > 0; }
             if (filter.value === 'late') { return team.uploads.length > 0 && !team.onTime; }
             return true;
+        }).filter(function (team) {
+            return !categoryFilter.value || (team.category ? team.category.key : 'none') === categoryFilter.value;
         });
 
         summary.innerHTML = '';
@@ -163,6 +174,9 @@ document.addEventListener('DOMContentLoaded', function () {
         summary.appendChild(stat('with uploads', uploaded.length));
         summary.appendChild(stat('without upload', data.teams.length - uploaded.length));
         summary.appendChild(stat('late only', uploaded.filter(function (team) { return !team.onTime; }).length));
+        data.categories.forEach(function (category) {
+            summary.appendChild(stat(category.name, data.teams.filter(function (team) { return team.category && team.category.key === category.key; }).length));
+        });
         if (data.deadline) { summary.appendChild(stat('deadline', when(data.deadline))); }
 
         teamsBox.innerHTML = '';
@@ -179,6 +193,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return response.json();
         }).then(function (result) {
             data = result;
+            data.categories = data.categories || [];
+            var chosen = categoryFilter.value;
+            categoryFilter.length = 1;
+            data.categories.concat([{ key: 'none', name: 'no category' }]).forEach(function (category) {
+                categoryFilter.appendChild(new Option(category.name, category.key, false, category.key === chosen));
+            });
+            var categoryLabel = document.getElementById('category-filter-label');
+            categoryLabel.classList.toggle('hidden', data.categories.length === 0);
+            categoryLabel.classList.toggle('flex', data.categories.length > 0);
             render();
         }).catch(function (error) {
             errorBox.textContent = error.message;
@@ -189,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('refresh').addEventListener('click', load);
     filter.addEventListener('change', function () { if (data) { render(); } });
+    categoryFilter.addEventListener('change', function () { if (data) { render(); } });
     load();
 });
 </script>

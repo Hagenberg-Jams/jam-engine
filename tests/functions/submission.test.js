@@ -327,6 +327,48 @@ describe('uploads', () => {
     });
 });
 
+describe('categories', () => {
+    const config = {
+        ...gameConfig,
+        categories: [{ key: 'purists', name: 'Purists' }, { key: 'occasional', name: 'Occasional' }, { key: 'vibe-coders', name: 'Vibe Coders' }],
+    };
+    const first = { version: '1.0.0', readme: README, screenshots: screenshots(4) };
+
+    it('needs one of the categories with the first upload, like the README', async () => {
+        const missing = await upload(env(), fakeDeps(), config, first);
+        expect(missing.body.errors).toEqual([{ code: 'category_required' }]);
+
+        const unknown = await upload(env(), fakeDeps(), config, { ...first, category: 'robots' });
+        expect(unknown.body.errors).toEqual([{ code: 'category' }]);
+
+        // Without categories in the config, nothing is asked and nothing is stored.
+        const e = env();
+        expect((await upload(e, fakeDeps(), gameConfig, { ...first, category: 'purists' })).status).toBe(200);
+        expect(e.JAM_SUBMISSIONS.objects.has('2026/the-awesomes/category.json')).toBe(false);
+    });
+
+    it('stores the category of the team, keeps it for a bugfix and changes it when the team chooses another one', async () => {
+        const e = env();
+        const deps = fakeDeps();
+        expect((await upload(e, deps, config, { ...first, category: 'occasional' })).status).toBe(200);
+
+        expect(await (await e.JAM_SUBMISSIONS.get('2026/the-awesomes/category.json')).json()).toMatchObject({ category: 'occasional' });
+        expect((await e.JAM_SUBMISSIONS.head('2026/the-awesomes/uploads/TheAwesomes_MostAwesomeGame_Win_1.0.0.zip')).customMetadata.category).toBe('occasional');
+        expect(deps.mails[0].text).toContain('Category: Occasional (new)');
+        expect(await (await handleTeam(post('team', { code: 'Pixel-2026', team: 'the-awesomes' }), e, fakeDeps(), config)).json()).toMatchObject({ category: 'occasional' });
+
+        const bugfix = fakeDeps();
+        expect((await upload(e, bugfix, config, { version: '1.0.1' })).status).toBe(200);
+        expect(bugfix.mails[0].text).toContain('Category: Occasional\n');
+
+        expect((await upload(e, fakeDeps(), config, { version: '1.0.2', category: 'vibe-coders' })).status).toBe(200);
+        const admin = await (await handleAdminList(e, config)).json();
+        expect(admin.categories).toEqual(config.categories);
+        expect(admin.teams.find((team) => team.slug === 'the-awesomes').category).toEqual({ key: 'vibe-coders', name: 'Vibe Coders' });
+        expect(admin.teams.find((team) => team.slug === 'pixel-pirates').category).toBeNull();
+    });
+});
+
 describe('admin', () => {
     it('lists every team with its uploads, README and screenshots, also teams without upload and unknown folders', async () => {
         const e = env();

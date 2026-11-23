@@ -114,6 +114,10 @@ class FetchSubmissionsCommand extends Command
 
         $readme = isset($files['README.md']) && $get('README.md', "{$target}/README.md") ? "{$target}/README.md" : null;
         $title = $readme !== null ? Submission::parseReadme((string) file_get_contents($readme))['title'] : '';
+        // The category the team chose, for jam:add-project.
+        if (isset($files['category.json'])) {
+            $get('category.json', "{$target}/category.json");
+        }
 
         $screenshots = 0;
         $current = isset($files['screenshots/current.json']) && $get('screenshots/current.json', "{$target}/screenshots/current.json")

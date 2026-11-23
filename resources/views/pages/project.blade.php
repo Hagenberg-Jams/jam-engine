@@ -25,6 +25,8 @@
         $images = $projectEntry['images'] ?? [];
         $downloads = $projectEntry['download'] ?? [];
         $headerImage = $projectEntry['headerimage'] ?? '';
+        $categories = \HagenbergJams\JamEngine\JamData::categories((int) $year);
+        $category = is_string($projectEntry['category'] ?? null) ? ($categories[$projectEntry['category']] ?? null) : null;
     }
 @endphp
 
@@ -51,6 +53,7 @@
         'downloads' => $downloads,
         'headerImage' => $headerImage,
         'team' => $team ?? [],
+        'category' => $category,
     ])
 @endif
 @endsection

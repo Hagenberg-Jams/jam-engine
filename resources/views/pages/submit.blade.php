@@ -15,6 +15,7 @@
     $closes = Submission::closes();
     $shots = $function['screenshots'];
     $project = (string) config('jam.labels.project_lower', 'project');
+    $categories = Submission::categories();
     $accept = implode(',', array_map(fn(string $extension): string => ".{$extension}", $function['extensions']));
     $input = 'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500';
     $label = 'block font-semibold mb-1';
@@ -28,6 +29,7 @@
         'screenshots' => $shots,
         'template' => Submission::readmeTemplate(),
         'contact' => (string) config('jam.email'),
+        'categories' => array_keys($categories),
     ];
 @endphp
 
@@ -104,6 +106,28 @@
                 </div>
             @endif
 
+            @if($categories !== [])
+                <fieldset id="category">
+                    <legend class="{{ $label }}">{{ ($settings['texts']['category_label'] ?? '') ?: config('jam.labels.category', 'Category') }} <span id="category-optional" class="hidden font-normal">(you chose it before, change it if you like)</span></legend>
+                    @if(!empty($settings['texts']['category_hint']))
+                        <p class="{{ $hint }} mt-0 mb-2">{{ $settings['texts']['category_hint'] }}</p>
+                    @endif
+                    <div class="grid gap-3 {{ count($categories) === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2' }}">
+                        @foreach($categories as $key => $category)
+                            <label class="flex gap-3 items-start rounded-lg border border-gray-300 dark:border-gray-600 p-4 cursor-pointer hover:border-primary-500 has-[:checked]:border-primary-600 has-[:checked]:ring-2 has-[:checked]:ring-primary-500">
+                                <input type="radio" name="category" value="{{ $key }}" class="mt-1 accent-primary-600">
+                                <span>
+                                    <span class="block font-semibold">{{ $category['name'] }}</span>
+                                    @if($category['description'] !== '')
+                                        <span class="block text-sm text-gray-600 dark:text-gray-400 mt-1">{{ $category['description'] }}</span>
+                                    @endif
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                </fieldset>
+            @endif
+
             <div>
                 <label for="file" class="{{ $label }}">{{ $game ? 'ZIP file' : 'Video file' }}</label>
                 <input id="file" type="file" accept="{{ $accept }}" class="{{ $input }}" required>
@@ -177,6 +201,8 @@ document.addEventListener('DOMContentLoaded', function () {
         version: 'Please enter a version like 1.0.0.',
         readme_required: 'Please add your README.md. It is needed with your first upload.',
         readme_size: 'The README.md is too large.',
+        category: 'Please choose one of the categories.',
+        category_required: 'Please choose your category. It is needed with your first upload.',
         screenshots_required: 'Please add at least ' + page.screenshots.min + ' images. They are needed with your first upload.',
         screenshots_count: 'Please add ' + page.screenshots.min + ' to ' + page.screenshots.max + ' images.',
         screenshots_type: 'Images must be PNG, JPG or WebP files of at most 25 MB.',
@@ -251,6 +277,10 @@ document.addEventListener('DOMContentLoaded', function () {
         $('previous').classList.toggle('hidden', state.uploads.length === 0);
         $('readme-optional').classList.toggle('hidden', !state.readme);
         if ($('screenshots-optional')) { $('screenshots-optional').classList.toggle('hidden', state.screenshots === 0); }
+        if ($('category')) {
+            $('category-optional').classList.toggle('hidden', !state.category);
+            filesForm.querySelectorAll('input[name="category"]').forEach(function (radio) { radio.checked = radio.value === state.category; });
+        }
         suggest();
         teamForm.classList.add('hidden');
         filesForm.classList.remove('hidden');
@@ -350,10 +380,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var shots = $('screenshots') ? Array.prototype.slice.call($('screenshots').files) : [];
         var errors = [];
         var extension = file ? file.name.split('.').pop().toLowerCase() : '';
+        var category = (filesForm.querySelector('input[name="category"]:checked') || {}).value || null;
 
         if (!file) { errors.push('Please choose your ' + (page.kind === 'game' ? 'ZIP file.' : 'video file.')); }
         else if (page.extensions.indexOf(extension) === -1) { errors.push(texts.extension); }
         else if (file.size > page.maxSize) { errors.push('The file has ' + megabytes(file.size) + ', at most ' + megabytes(page.maxSize) + ' are possible.'); }
+        if (page.categories.length > 0 && !category && !state.category) { errors.push(texts.category_required); }
         if (!readme && !state.readme) { errors.push(texts.readme_required); }
         errors = errors.concat(await checkReadme(readme).catch(function () { return []; }));
         if (shots.length === 0 && page.screenshots.min > 0 && state.screenshots === 0) { errors.push(texts.screenshots_required); }
@@ -372,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
             turnstile: (filesForm.querySelector('[name="cf-turnstile-response"]') || {}).value,
             platform: platform(),
             version: $('version').value.trim(),
+            category: category,
             extension: extension,
             size: file.size,
             readme: readme ? await readme.text() : null,

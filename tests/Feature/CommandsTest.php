@@ -238,16 +238,23 @@ it('fetches every version on request, and only the chosen teams', function (): v
 it('adds a project from a submission with the data of its README', function (): void {
     $site = fixtureCopy('game');
     $mirror = submissionMirror(images: true);
+    // The jam has categories, and the team chose one when uploading.
+    file_put_contents("{$site}/_data/jams/2025.yaml", "categories:
+  - { key: purists, name: Purists }
+  - { key: occasional, name: Occasional }
+", FILE_APPEND);
+    file_put_contents("{$mirror}/2025/the-awesomes/category.json", json_encode(['category' => 'occasional']));
     runHyde($site, "jam:fetch-submissions --year=2025 --from={$mirror}");
 
-    // Name from the README (Enter), players, control types, not a winner.
-    $process = runWithInput($site, 'jam:add-project --year=2025 --submission=the-awesomes', ['', '1', '1,2', 'no']);
+    // Name from the README (Enter), players, control types, the category of the team (Enter), not a winner.
+    $process = runWithInput($site, 'jam:add-project --year=2025 --submission=the-awesomes', ['', '1', '1,2', '', 'no']);
     $data = (string) file_get_contents("{$site}/_data/projects/2025.yaml");
 
     expect($process->getExitCode())->toBe(0, $process->getOutput() . $process->getErrorOutput())
         ->and($data)->toContain('Cat Quest')->toContain('The Awesomes')->toContain('Ann Example')->toContain('Bo Tester')
         ->toContain('Collect all fish to win.')->toContain('**Movement:** WASD')->toContain('Start CatQuest.exe.')
-        ->toContain('platform: Windows')->toContain('platform: Linux')
+        ->toContain('platform: Windows')->toContain('platform: Linux')->toContain('category: occasional')
+        ->and(file_exists("{$site}/submissions/2025/the-awesomes/category.json"))->toBeTrue()
         ->and(file_exists("{$site}/games/2025/cat-quest-Windows.zip"))->toBeTrue()
         ->and(file_exists("{$site}/_media/2025/cat-quest_header.webp"))->toBeTrue()
         ->and(glob("{$site}/_media/2025/cat-quest_image*_full.webp"))->toHaveCount(4)

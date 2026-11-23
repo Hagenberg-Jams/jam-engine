@@ -75,6 +75,16 @@ class Submission
         return ['team' => '', 'aud' => ''];
     }
 
+    /**
+     * The categories teams choose from when they upload, from the YAML file of the jam. Empty: no choice.
+     *
+     * @return array<string, array{name: string, description: string}>
+     */
+    public static function categories(): array
+    {
+        return self::year() === null ? [] : JamData::categories((int) self::year());
+    }
+
     public static function turnstileSiteKey(): string
     {
         return self::string(config('jam.submission.turnstile_site_key')) ?: self::string(config('jam.registration.form.turnstile_site_key'));
@@ -241,6 +251,7 @@ class Submission
                 ], self::sections()),
             ],
             'teams' => self::teams(),
+            'categories' => array_map(fn(string $key, array $category): array => ['key' => $key, 'name' => $category['name']], array_keys(self::categories()), self::categories()),
             // Organisers and sender: the ones of the submission, or else the ones of the registration form.
             'notify' => Registration::notify($notify !== [] ? $notify : (array) config('jam.registration.form.notify', [])),
             'from' => $from !== '' ? $from : self::string(config('jam.registration.form.from')),

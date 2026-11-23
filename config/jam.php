@@ -126,6 +126,9 @@ return [
         ],
         'texts' => [
             'intro' => '',
+            // Above the choice of the categories from `categories` in _data/jams/YYYY.yaml. Empty: labels.category.
+            'category_label' => '',
+            'category_hint' => 'The awards are given in each category.',
         ],
     ],
 
@@ -147,6 +150,8 @@ return [
         'image' => 'Image',
         'video' => 'Video',
         'card_cta' => 'Details',
+        // The categories of a jam from `categories` in _data/jams/YYYY.yaml.
+        'category' => 'Category',
         'latest_cta' => 'View the projects of',
         'vote_cta' => 'Vote for the projects of',
         'meta_verb' => 'See',

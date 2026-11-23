@@ -156,6 +156,16 @@ README and screenshots are needed with the first upload of a team. Later uploads
 ```
 
 - **Teams:** `_data/teams/YYYY.yaml` with a list of team names, for example `- The Awesomes`. A file without names offers no team yet. Without the file, the page offers the confirmed registrations of the registration form. Do not rename a team after its first upload: its folder in the bucket follows the name.
+- **Categories:** with `categories` in `_data/jams/YYYY.yaml`, a team chooses one of them with its first upload, and may change it later. The awards are then given in each category: `winner: <key>` on a project shows the name of its category as the award, next to the awards of `config/jam.php`. The year page gets a filter for each category its projects use, and the project page shows it. Names and descriptions can be changed at any time; keep the `key`, because uploads and projects refer to it.
+
+  ```yaml
+  categories:
+    - key: purists
+      name: Purists
+      description: No AI at all.
+  ```
+
+  `labels.category` names them on the site (default `Category`), `submission.texts.category_label` and `category_hint` on the upload page. The choice of a team is in `YYYY/<team>/category.json`, `jam:add-project --submission` writes it to the project as `category: <key>`.
 - **Storage:** the files go to a private R2 bucket `<project>-submissions` in the EU, `<project>-submissions-preview` for previews. Each team has a folder `YYYY/<team>/` with `uploads/`, `README.md`, every earlier README in `readme/`, and the screenshots in `screenshots/`. Large files are uploaded in parts of 50 MB, so there is no limit from the functions.
 
 ### Cloudflare setup

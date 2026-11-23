@@ -110,6 +110,51 @@ class JamData
     }
 
     /**
+     * The categories of a jam from `categories` in its YAML file, in their order, for example how much AI a team used.
+     * Teams choose one when they upload, and a project with `winner: <key>` won the award of its category.
+     *
+     * @return array<string, array{name: string, description: string}>
+     */
+    public static function categories(int $year): array
+    {
+        $entries = self::getJam($year)['categories'] ?? [];
+        $categories = [];
+
+        foreach (is_array($entries) ? $entries : [] as $entry) {
+            $key = is_array($entry) && is_scalar($entry['key'] ?? null) ? strtolower(trim((string) $entry['key'])) : '';
+            if (preg_match('/^[a-z0-9][a-z0-9-]*$/', $key) !== 1 || isset($categories[$key])) {
+                continue;
+            }
+
+            $name = is_scalar($entry['name'] ?? null) ? trim((string) $entry['name']) : '';
+            $categories[$key] = [
+                'name' => $name !== '' ? $name : ucfirst($key),
+                'description' => is_scalar($entry['description'] ?? null) ? trim((string) $entry['description']) : '',
+            ];
+        }
+
+        return $categories;
+    }
+
+    /**
+     * The names of the awards of a jam: those of the site, then one for each category of the jam.
+     *
+     * @return array<string, string>
+     */
+    public static function awards(int $year): array
+    {
+        $awards = [];
+        foreach ((array) config('jam.awards', []) as $key => $name) {
+            $awards[(string) $key] = is_scalar($name) ? (string) $name : (string) $key;
+        }
+        foreach (self::categories($year) as $key => $category) {
+            $awards[$key] ??= $category['name'];
+        }
+
+        return $awards;
+    }
+
+    /**
      * Get all available jam years
      *
      * @return array<int>

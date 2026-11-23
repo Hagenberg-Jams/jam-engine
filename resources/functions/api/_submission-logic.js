@@ -233,13 +233,23 @@ export async function teamState(env, config, team) {
     const readmeText = readme ? await readme.text() : null;
     const screenshots = await bucket.get(`${base}/screenshots/current.json`);
     const current = screenshots ? await screenshots.json() : null;
+    const chosen = await bucket.get(`${base}/category.json`);
+    const category = chosen ? ((await chosen.json().catch(() => ({}))).category ?? null) : null;
 
     return {
         uploads: uploads.sort((a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt))),
         latest,
         readme: readmeText === null ? null : { title: checkReadme(readmeText, config).title, text: readmeText },
         screenshots: current?.files?.length ?? 0,
+        category,
     };
+}
+
+const categories = (config) => (Array.isArray(config.categories) ? config.categories : []);
+
+/** The name of a category, or its key when it is no longer in the list. */
+export function categoryName(config, key) {
+    return categories(config).find((category) => category.key === key)?.name ?? key;
 }
 
 // Handlers
@@ -276,6 +286,7 @@ export async function handleTeam(request, env, deps, config) {
         suggested,
         readme: state.readme ? { title: state.readme.title } : null,
         screenshots: state.screenshots,
+        category: state.category,
     });
 }
 
@@ -350,6 +361,16 @@ export async function handleStart(request, env, deps, config) {
         errors.push({ code: 'readme_required' });
     }
 
+    // A category is needed once, like the README. Later uploads may keep it or choose another one.
+    const category = typeof input.category === 'string' && input.category !== '' ? input.category : null;
+    if (categories(config).length > 0) {
+        if (category !== null && !categories(config).some((item) => item.key === category)) {
+            errors.push({ code: 'category' });
+        } else if (category === null && !state.category) {
+            errors.push({ code: 'category_required' });
+        }
+    }
+
     const screenshots = Array.isArray(input.screenshots) ? input.screenshots : [];
     const { min, max } = config.screenshots;
     if (screenshots.length > 0) {
@@ -381,15 +402,18 @@ export async function handleStart(request, env, deps, config) {
         await bucket.put(`${base}/readme/${stamp}.md`, readme, { httpMetadata: { contentType: 'text/markdown; charset=utf-8' } });
     }
 
+    const chosen = categories(config).length > 0 ? (category ?? state.category) : null;
     const upload = await bucket.createMultipartUpload(key, {
         httpMetadata: { contentType: CONTENT_TYPES[extension] ?? 'application/octet-stream' },
         customMetadata: {
             team: team.name, title, platform, version: input.version.trim(), late: late ? 'yes' : 'no', uploadedAt: new Date(deps.now).toISOString(),
+            ...(chosen ? { category: chosen } : {}),
         },
     });
 
     const session = {
         key, uploadId: upload.uploadId, team: team.slug, teamName: team.name, title, platform, version: input.version.trim(),
+        category: chosen, categoryChanged: chosen !== null && chosen !== state.category,
         size, stamp, late, readme: readme !== null, screenshots: screenshots.map((shot) => IMAGE_TYPES[shot.type]),
         expires: deps.now + SESSION_HOURS * 3600000,
     };
@@ -470,6 +494,11 @@ export async function handleComplete(request, env, deps, config) {
         const readme = await bucket.get(`${base}/readme/${session.stamp}.md`);
         await bucket.put(`${base}/README.md`, await readme.text(), { httpMetadata: { contentType: 'text/markdown; charset=utf-8' } });
     }
+    if (session.categoryChanged) {
+        await bucket.put(`${base}/category.json`, JSON.stringify({ category: session.category, chosenAt: new Date(deps.now).toISOString() }), {
+            httpMetadata: { contentType: 'application/json' },
+        });
+    }
     if (stored.length > 0) {
         await bucket.put(`${base}/screenshots/current.json`, JSON.stringify({
             stamp: session.stamp, files: stored.map((item) => item.key.slice(`${base}/screenshots/`.length)).sort(),
@@ -520,7 +549,7 @@ export async function handleAdminList(env, config) {
     for (const team of bySlug.values()) {
         const base = `${config.year}/${team.slug}/`;
         const own = objects.filter((object) => object.key.startsWith(base));
-        const state = own.length > 0 ? await teamState(env, config, team) : { uploads: [], latest: {}, readme: null };
+        const state = own.length > 0 ? await teamState(env, config, team) : { uploads: [], latest: {}, readme: null, category: null };
         const current = own.some((object) => object.key === `${base}screenshots/current.json`)
             ? await (await bucket.get(`${base}screenshots/current.json`)).json()
             : null;
@@ -538,12 +567,13 @@ export async function handleAdminList(env, config) {
             readme: state.readme ? { key: `${base}README.md`, title: state.readme.title, text: state.readme.text } : null,
             readmes: own.filter((object) => object.key.startsWith(`${base}readme/`)).length,
             screenshots: (current?.files ?? []).map((file) => `${base}screenshots/${file}`),
+            category: state.category ? { key: state.category, name: categoryName(config, state.category) } : null,
         });
     }
 
     result.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-    return json(200, { year: config.year, kind: config.kind, deadline: config.deadline, teams: result });
+    return json(200, { year: config.year, kind: config.kind, deadline: config.deadline, categories: categories(config), teams: result });
 }
 
 const INLINE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'text/markdown; charset=utf-8'];
@@ -587,7 +617,9 @@ export function organiserMail(session, file, config) {
         to: config.notify,
         subject: `Upload${session.late ? ' (late)' : ''}: ${session.teamName}, ${session.title} ${what}`,
         text: `${session.teamName} uploaded ${file} (${(session.size / 1048576).toFixed(1)} MB)${extras ? ` with ${extras}` : ''} `
-            + `for the ${config.siteName} ${config.year}.${session.late ? '\n\nThe upload came after the deadline.' : ''}`
+            + `for the ${config.siteName} ${config.year}.`
+            + `${session.category ? `\n\nCategory: ${categoryName(config, session.category)}${session.categoryChanged ? ' (new)' : ''}` : ''}`
+            + `${session.late ? '\n\nThe upload came after the deadline.' : ''}`
             + `\n\nThe files are in the R2 bucket of the site under ${config.year}/${session.team}/.\n\n${config.siteName}\n${config.siteUrl}`,
     };
 }

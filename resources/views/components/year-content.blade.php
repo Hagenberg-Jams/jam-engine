@@ -5,6 +5,15 @@
 
     $projectFilters = config('jam.project.filters', []);
     $cardMeta = config('jam.project.card_meta', []);
+
+    // The categories of the jam that its projects use, as filters next to the others.
+    $yearCategories = \HagenbergJams\JamEngine\JamData::categories((int) $year);
+    $usedCategories = collect($projects)->pluck('category')->filter(fn($key) => is_string($key) && isset($yearCategories[$key]))->unique()->all();
+    foreach (array_keys($yearCategories) as $categoryKey) {
+        if (in_array($categoryKey, $usedCategories, true)) {
+            $projectFilters[] = ['label' => $yearCategories[$categoryKey]['name'], 'selector' => '.category-' . $categoryKey];
+        }
+    }
 @endphp
 
         <!-- Page Header -->
@@ -116,7 +125,7 @@
         $hasWinners = count($winnersByCategory) > 0;
     }
     
-    $categoryNames = config('jam.awards', []);
+    $categoryNames = \HagenbergJams\JamEngine\JamData::awards((int) $year);
     $categoryOrder = array_keys($categoryNames);
 @endphp
 
@@ -173,8 +182,9 @@
                     $imagePath = $headerImage ? "{$year}/{$headerImage}" : '';
                     $winner = $entry['winner'] ?? 'no';
                     $isWinner = $winner !== 'no' && $winner !== '';
+                    $category = is_string($entry['category'] ?? null) && isset($yearCategories[$entry['category']]) ? $entry['category'] : null;
                 @endphp
-                <div class="project-card {{ $playerClass }} {{ $controlClasses }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                <div class="project-card {{ $playerClass }} {{ $controlClasses }} {{ $category ? 'category-' . $category : '' }} bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
                      data-project-name="{{ strtolower($projectName) }}" data-team-name="{{ strtolower($team['name'] ?? '') }}">
                     <div class="relative h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden">
                         @if($imagePath && file_exists(base_path("_media/{$year}/{$headerImage}")))
@@ -210,6 +220,9 @@
                         </h3>
                         <p class="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">{{ Str::limit(strip_tags($description), 100) }}</p>
                         <div class="flex gap-2 flex-wrap mb-4">
+                        @if($category)
+                        <span class="text-xs bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-100 px-2 py-1 rounded font-semibold" title="{{ config('jam.labels.category') }}">{{ $yearCategories[$category]['name'] }}</span>
+                        @endif
                         @if(in_array('players', $cardMeta, true))
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">
                             @php

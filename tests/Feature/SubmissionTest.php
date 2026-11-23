@@ -131,3 +131,47 @@ it('links the upload page in the menu while it is open, and the admin pages quie
         ->and($closed)->not->toMatch('#href="/?submit\.html"#')->toContain('href="/admin/submissions"')
         ->and($none)->not->toContain('submit.html')->not->toContain('Admin:');
 });
+
+/** Gives the jam 2025 of the game fixture the AI categories, and the game of the year a category and its award. */
+function withCategories(string $category = 'purists'): callable
+{
+    return function (string $site) use ($category): void {
+        withSubmission()($site);
+        file_put_contents("{$site}/_data/jams/2025.yaml", implode("\n", [
+            'categories:',
+            '  - key: purists',
+            '    name: Purists',
+            '    description: No AI at all.',
+            '  - key: occasional',
+            '    name: Occasional',
+            '  - key: vibe-coders',
+            '    name: Vibe Coders',
+            '',
+        ]), FILE_APPEND);
+        $projects = (string) file_get_contents("{$site}/_data/projects/2025.yaml");
+        file_put_contents("{$site}/_data/projects/2025.yaml", str_replace('  winner: jury', "  category: {$category}\n  winner: {$category}", $projects));
+    };
+}
+
+it('asks for the category of the jam when uploading, and shows it with the projects and their awards', function (): void {
+    $site = buildSite('game', prepare: withCategories());
+    $config = json_decode((string) file_get_contents("{$site}/functions/api/_submission-config.json"), true);
+
+    expect($config['categories'])->toBe([['key' => 'purists', 'name' => 'Purists'], ['key' => 'occasional', 'name' => 'Occasional'], ['key' => 'vibe-coders', 'name' => 'Vibe Coders']])
+        ->and(page($site, 'submit.html'))->toContain('name="category" value="purists"')->toContain('No AI at all.')->toContain('Vibe Coders')->toContain('The awards are given in each category.')
+        ->and(page($site, '2025.html'))->toContain('data-filter=".category-purists"')->not->toContain('data-filter=".category-occasional"')
+        ->toMatch('#class="project-card [^"]*category-purists#')
+        ->toMatch('#Winner in the category <strong[^>]*>Purists</strong>#')
+        ->and(page($site, '2025/space-game.html'))->toContain('Category: Purists')
+        ->and(runHyde($site, 'jam:validate')->getOutput())->not->toContain('unknown');
+});
+
+it('builds no choice without categories, and warns about a category the jam does not have', function (): void {
+    $plain = buildSite('game', prepare: withSubmission());
+    $unknown = buildSite('game', prepare: withCategories('robots'));
+
+    expect(page($plain, 'submit.html'))->not->toContain('type="radio" name="category"')
+        ->and(json_decode((string) file_get_contents("{$plain}/functions/api/_submission-config.json"), true)['categories'])->toBe([])
+        ->and(page($plain, '2025.html'))->not->toContain('category-')
+        ->and(runHyde($unknown, 'jam:validate')->getOutput())->toContain("Space Game has the unknown category \"robots\"")->toContain("unknown award 'robots'");
+});

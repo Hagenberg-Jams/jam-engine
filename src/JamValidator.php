@@ -80,7 +80,9 @@ class JamValidator
     {
         $name = basename($file);
         $entries = $this->parse($file);
-        $awards = config('jam.awards', []);
+        $year = preg_match('/^(\d{4})\.yaml$/', $name, $match) === 1 ? (int) $match[1] : 0;
+        $awards = JamData::awards($year);
+        $categories = JamData::categories($year);
 
         foreach ($entries ?? [] as $index => $entry) {
             if (!is_array($entry)) {
@@ -101,9 +103,14 @@ class JamValidator
                 }
             }
 
+            $chosen = $entry['category'] ?? null;
+            if ($chosen !== null && (!is_string($chosen) || !isset($categories[$chosen]))) {
+                $this->warnings[] = "{$name}: {$project['name']} has the unknown category " . json_encode($chosen) . ', add it to categories in _data/jams/' . $year . '.yaml';
+            }
+
             $winner = is_string($entry['winner'] ?? null) ? $entry['winner'] : '';
             foreach (array_filter(array_map('trim', explode(',', $winner))) as $category) {
-                if ($category !== 'no' && is_array($awards) && !array_key_exists($category, $awards)) {
+                if ($category !== 'no' && !array_key_exists($category, $awards)) {
                     $this->warnings[] = "{$name}: {$project['name']} has the unknown award '{$category}', which is not displayed";
                 }
             }

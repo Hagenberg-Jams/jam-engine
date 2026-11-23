@@ -13,6 +13,9 @@
         @if(isset($team['name']))
             <p class="text-xl text-primary-200">{{ $team['name'] }}</p>
         @endif
+        @if(!empty($category))
+            <p class="mt-4"><span class="inline-block rounded-full bg-white/15 px-4 py-1 text-sm font-semibold" title="{{ $category['description'] }}">{{ config('jam.labels.category') }}: {{ $category['name'] }}</span></p>
+        @endif
     </div>
 </section>
 

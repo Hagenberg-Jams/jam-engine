@@ -11,6 +11,7 @@ use function file_exists;
 use function file_put_contents;
 use function glob;
 
+use HagenbergJams\JamEngine\JamData;
 use HagenbergJams\JamEngine\Submission;
 
 use function hash_file;
@@ -61,7 +62,7 @@ class AddProjectCommand extends Command
     /**
      * What the README of a submission says, and the platform of each of its ZIP files.
      *
-     * @var array{name: string, team: string, members: array<int, string>, description: string, controls: string|null, platforms: array<string, string>}|null
+     * @var array{name: string, team: string, members: array<int, string>, description: string, controls: string|null, platforms: array<string, string>, category: string|null}|null
      */
     protected ?array $submission = null;
 
@@ -236,7 +237,7 @@ class AddProjectCommand extends Command
     }
 
     /**
-     * @return array{name: string, players: string|null, controls: array<string>|null, controlsText: string|null, videos: array<int, array{youtube: string}>, description: string, teamName: string, teamMembers: array<string>, winner: string}|null
+     * @return array{name: string, players: string|null, controls: array<string>|null, controlsText: string|null, videos: array<int, array{youtube: string}>, description: string, teamName: string, teamMembers: array<string>, category: string|null, winner: string}|null
      */
     protected function collectGameData(): ?array
     {
@@ -277,6 +278,7 @@ class AddProjectCommand extends Command
                 'description' => $submission['description'],
                 'teamName' => $submission['team'],
                 'teamMembers' => $submission['members'],
+                'category' => $this->askForCategory($submission['category']),
                 'winner' => $this->askForWinner(),
             ];
         }
@@ -290,6 +292,7 @@ class AddProjectCommand extends Command
             $teamName = is_string($teamNameInput) ? $teamNameInput : '';
             $teamMembers = $this->askForTeamMembers();
         }
+        $category = $this->askForCategory(null);
         $winner = $this->askForWinner();
 
         return [
@@ -301,6 +304,7 @@ class AddProjectCommand extends Command
             'description' => $description,
             'teamName' => $teamName,
             'teamMembers' => $teamMembers,
+            'category' => $category,
             'winner' => $winner,
         ];
     }
@@ -322,6 +326,7 @@ class AddProjectCommand extends Command
         $sections = $readme['sections'];
         $members = Submission::listItems($sections['Team Members'] ?? '');
         $controls = trim(implode("\n\n", array_filter([$sections['Controls'] ?? '', $sections['How to Play'] ?? ''])));
+        $chosen = is_file("{$dir}/category.json") ? json_decode((string) file_get_contents("{$dir}/category.json"), true) : null;
 
         $screenshots = $this->getImageFiles("{$dir}/screenshots");
         $this->stage($screenshots === [] ? [] : [$screenshots[0]], $this->inputHeaderDir);
@@ -344,6 +349,7 @@ class AddProjectCommand extends Command
             'description' => $sections['Description'] ?? '',
             'controls' => $controls !== '' ? $controls : null,
             'platforms' => $platforms,
+            'category' => is_array($chosen) && is_string($chosen['category'] ?? null) ? $chosen['category'] : null,
         ];
 
         $this->info("Using the submission of {$team}: {$readme['title']}, " . count($screenshots) . ' screenshot(s), ' . count($platforms) . ' download(s).');
@@ -609,6 +615,21 @@ class AddProjectCommand extends Command
         return array_values($members);
     }
 
+    /** The category of the project, when the jam has categories. A submission brings the one the team chose. */
+    protected function askForCategory(?string $chosen): ?string
+    {
+        $categories = JamData::categories((int) $this->year);
+        if ($categories === []) {
+            return null;
+        }
+
+        $choices = array_map(fn(string $key, array $category): string => "{$key}: {$category['name']}", array_keys($categories), $categories);
+        $default = $chosen !== null && isset($categories[$chosen]) ? array_search($chosen, array_keys($categories), true) : null;
+        $answer = $this->choice('Category', $choices, $default === false ? null : $default);
+
+        return explode(':', is_string($answer) ? $answer : '', 2)[0] ?: null;
+    }
+
     protected function askForWinner(): string
     {
         $isWinner = $this->confirm('Is this a winning project?', false);
@@ -617,8 +638,7 @@ class AddProjectCommand extends Command
             return 'no';
         }
 
-        $awards = config('jam.awards', []);
-        $available = is_array($awards) ? implode(', ', array_keys($awards)) : '';
+        $available = implode(', ', array_keys(JamData::awards((int) $this->year)));
         $award = $this->ask("Awards, comma-separated ({$available})", '');
 
         return is_string($award) && $award !== '' ? $award : 'no';
@@ -998,10 +1018,15 @@ class AddProjectCommand extends Command
                 'name' => $gameData['teamName'],
                 'members' => $gameData['teamMembers'],
             ],
+            'category' => $gameData['category'] ?? null,
             'winner' => $gameData['winner'],
             'headerimage' => $gameData['headerimage'],
             'images' => $gameData['images'],
         ];
+
+        if ($entry['category'] === null) {
+            unset($entry['category']);
+        }
 
         if (isset($gameData['download'])) {
             $entry['download'] = $gameData['download'];
