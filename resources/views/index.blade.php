@@ -56,6 +56,7 @@
                     <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto mt-8">{{ $hero['description'] }}</p>
                     @endif
                 </hgroup>
+                @include('components.upcoming-jam')
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
                     @if($latestHasProjects)
                     <a href="/{{ $latestJam }}" class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors pointer-events-auto">
@@ -81,7 +82,12 @@
 
 @section('content')
 
-@include('components.upcoming-jam')
+@php
+    $topicJam = config('jam.features.topic_release') ? \HagenbergJams\JamEngine\JamSchedule::currentTopicJam() : null;
+@endphp
+@if($topicJam)
+    @include('components.topic-release', $topicJam)
+@endif
 
 <!-- Categories Section -->
 @if(count($highlights) > 0)

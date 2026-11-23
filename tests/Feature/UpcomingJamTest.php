@@ -25,3 +25,13 @@ it('can be turned off', function (): void {
 
     expect(page($site, 'index.html'))->not->toContain('id="upcoming-jam"');
 });
+
+it('shows the announcement in the hero, and drops the register button after the registration deadline', function (): void {
+    $open = page(buildSite('animation'), 'index.html');
+    $late = page(buildSite('animation', now: '2026-11-16T10:00:00+01:00'), 'index.html');
+
+    // The call to action comes before the end of the hero, so it is seen without scrolling.
+    expect(strpos($open, 'id="upcoming-jam"'))->toBeLessThan(strpos($open, '<main'))
+        ->and($late)->toContain('id="upcoming-jam"')->toContain('21–22 November 2026')
+        ->not->toContain('Register for 2026')->not->toContain('Registration closes');
+});
