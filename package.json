@@ -7,7 +7,7 @@
         "build:fixture": "vite build --config tests/browser/vite.config.js"
     },
     "devDependencies": {
-        "@playwright/test": "^1.50.0",
+        "@playwright/test": "^1.65.1",
         "@tailwindcss/typography": "^0.5.20",
         "@tailwindcss/vite": "^4.3.5",
         "glightbox": "^3.3.1",
